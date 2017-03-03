@@ -4,14 +4,16 @@ namespace Game.Network {
     /// <summary>
     /// Simple abstract class defining a packet structure.
     /// </summary>
-    public abstract class NetPacket {
+    public abstract class PacketBase : IEncodable{
 
         protected NetPacketType type;
         protected int sender;
 
         #region constructors
 
-        public NetPacket(NetPacketType type, int sender) {
+        public PacketBase() { }
+
+        public PacketBase(NetPacketType type, int sender) {
             this.type = type;
             this.sender = sender;
         }
@@ -50,8 +52,17 @@ namespace Game.Network {
         /// </summary>
         /// <param name="reader">the reader containing the buffer</param>
         public virtual void Deserialize(NetDataReader reader) {
-            type = (NetPacketType)reader.GetUShort();
             sender = reader.GetInt();
+        }
+
+        #endregion
+
+        #region Static reader
+
+        public static T Read<T> (NetDataReader reader) where T : PacketBase, new() {
+            T packet = new T();
+            packet.Deserialize(reader);
+            return packet; 
         }
 
         #endregion

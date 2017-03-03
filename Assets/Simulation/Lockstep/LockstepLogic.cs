@@ -2,21 +2,21 @@ namespace Game.Lockstep {
     /// <summary>
     /// Class implementing the main loop for the lockstep logic.
     /// </summary>
-    public class LockstepLogic : EntityBase {
+    public class LockstepLogic : IGameBehaviour {
 
         #region Variables
 
         private ulong turnID;
         private uint frame;
         private readonly uint maxFrames = 4;
-        private LockstepClient client;
+        //private LockstepClient client;
         private CommandBuffer buffer;
 
         #endregion
 
         #region Singleton - Static methods
 
-        private static LockstepLogic instance = new LockstepLogic();
+        private static LockstepLogic instance;
 
         public LockstepLogic Instance {
             get { return instance; }
@@ -30,10 +30,10 @@ namespace Game.Lockstep {
 
         #region Constructors
 
-        public LockstepLogic() : base() {
+        public LockstepLogic() {
+            instance = this;
             turnID = 0;
             frame = 0;
-            client = new LockstepClient(12010, "127.0.0.1", 28960);
             buffer = new CommandBuffer((int)maxFrames);
         }
 
@@ -41,7 +41,9 @@ namespace Game.Lockstep {
 
         #region Lockstep
 
-        public override void Update() {
+        public void Init() { }
+
+        public void Update() {
             if (IsLockstepTurn()) {
                 if (!IsLockstepReady())
                     return;
@@ -51,6 +53,8 @@ namespace Game.Lockstep {
             }
             NextFrame();
         }
+
+        public void Quit() { }
 
         /// <summary>
         /// Advance to the next frame, the counter needs to be from 0 to 3.

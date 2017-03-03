@@ -18,7 +18,7 @@ namespace Game {
         private double accumulator;
         private double totalTime;
 
-        private List<EntityBase> entities;
+        private List<IGameBehaviour> entities;
         private LockstepLogic lockstep;
 
         #endregion
@@ -36,11 +36,11 @@ namespace Game {
             get { return instance.targetTime; }
         }
 
-        public static void Register(EntityBase entity) {
+        public static void Register(IGameBehaviour entity) {
             instance.entities.Add(entity);
         }
 
-        public static void Destroy(EntityBase entity) {
+        public static void Destroy(IGameBehaviour entity) {
             instance.entities.Remove(entity);
         }
 
@@ -57,7 +57,7 @@ namespace Game {
             targetTime = deltaTime;
             maximumTime = maxTime;
             stopwatch = new Stopwatch();
-            entities = new List<EntityBase>();
+            entities = new List<IGameBehaviour>();
         }
 
         #endregion
@@ -88,21 +88,21 @@ namespace Game {
         }
 
         public void Init() {
-            foreach (EntityBase entity in entities) {
+            foreach (IGameBehaviour entity in entities) {
                 entity.Init();
             }
             stopwatch.Start();
         }
 
         public void Update() {
-            foreach (EntityBase entity in entities) {
+            foreach (IGameBehaviour entity in entities) {
                 entity.Update();
             }
         }
 
         public void Quit() {
             stopwatch.Stop();
-            foreach (EntityBase entity in entities) {
+            foreach (IGameBehaviour entity in entities) {
                 entity.Quit();
             }
         }
