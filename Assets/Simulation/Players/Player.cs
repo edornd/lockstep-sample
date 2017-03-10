@@ -1,7 +1,7 @@
-using System;
 using LiteNetLib.Utils;
+using Game.Network;
 
-namespace Game.Network.Players {
+namespace Game.Players {
     public class Player : IEncodable {
 
         private int id;
@@ -10,21 +10,15 @@ namespace Game.Network.Players {
 
         #region Constructors
 
-        public Player() {
-            id = 0;
-            name = "";
-            ready = false;
-        }
+        public Player() : this(0,""){ }
+
+        public Player(int playerID) : this(playerID, ""){ }
+
+        public Player(string username) : this(0, username){ }
 
         public Player(int playerID, string playerName) {
             this.id = playerID;
             this.name = playerName;
-            this.ready = false;
-        }
-
-        public Player(int playerID) {
-            this.id = playerID;
-            this.name = "";
             this.ready = false;
         }
 

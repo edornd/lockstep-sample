@@ -99,6 +99,8 @@ GameObject:
   m_Component:
   - 4: {fileID: 7355315}
   - 114: {fileID: 7355314}
+  - 114: {fileID: 7355317}
+  - 114: {fileID: 7355316}
   m_Layer: 0
   m_Name: Network Manager
   m_TagString: Network
@@ -117,8 +119,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26f88efa7927e794181e05657e5582b7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  updateRate: 15
-  connectionKey: test
 --- !u!4 &7355315
 Transform:
   m_ObjectHideFlags: 0
@@ -132,6 +132,28 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 5
+--- !u!114 &7355316
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 7355313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1787a8e1d3c085442a7af2897528a3e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &7355317
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 7355313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9057b44c1d762164daab364d2ae81660, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &191435554
 GameObject:
   m_ObjectHideFlags: 0
@@ -357,7 +379,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1319361278}
-        m_MethodName: OnConnectPressed
+        m_MethodName: OnConnectButtonPressed
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1231,7 +1253,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1319361278}
-        m_MethodName: OnHostGamePressed
+        m_MethodName: OnHostGameButtonPressed
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1359,6 +1381,7 @@ GameObject:
   m_Component:
   - 4: {fileID: 1319361279}
   - 114: {fileID: 1319361278}
+  - 114: {fileID: 1319361280}
   m_Layer: 0
   m_Name: UI Manager
   m_TagString: UI
@@ -1395,6 +1418,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 4
+--- !u!114 &1319361280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1319361277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9306c31a0f062443983c7fd5bc19521, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1483142171
 GameObject:
   m_ObjectHideFlags: 0

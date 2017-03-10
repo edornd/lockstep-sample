@@ -1,15 +1,14 @@
-﻿
+
 namespace Game.Network {
     public enum NetPacketType : ushort {
         PeerConnect,
         PeerDisconnect,
-        PeerIdentity,
-        PeerInfo,
+        PeerAuth,
         PeerLatency,
-        GameLogIn,
-        GameLogOut,
-        GameSeed,
-        GameReady,
+        PlayerEnter,
+        PlayerLeave,
+        PlayerReady,
+        GameInfo,
         GameStart,
         GamePause,
         GameStop,

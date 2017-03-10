@@ -2,11 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using Presentation.Network;
-using Game.Utils;
-using Game.Network.Players;
+using Game.Network;
 
 namespace Presentation.UI {
-    public class UIMenuMultiplayer : MonoBehaviour, IObserver {
+    public class UIMenuMultiplayer : MonoBehaviour {
 
         public InputField usernameField;
         public InputField addressField;
@@ -16,30 +15,71 @@ namespace Presentation.UI {
 
         private string username;
         private string address;
-        private LockstepClient client;
-        private LockstepServer server;
+        private LoginManager loginHandler;
+
+        #region Monobehaviour
+
+        void OnEnable() {
+            addressField.onValidateInput += OnValidateChar;
+            NetEventManager.AddListener(NetEventType.Connected, OnConnectionEvent);
+            NetEventManager.AddListener(NetEventType.Authenticated, OnAuthenticationEvent);
+            NetEventManager.AddListener(NetEventType.LoggedIn, OnLoginEvent);
+            NetEventManager.AddListener(NetEventType.Disconnected, OnConnectionFailed);
+        }
+
+        void OnDisable() {
+            addressField.onValidateInput -= OnValidateChar;
+            NetEventManager.RemoveListener(NetEventType.Connected, OnConnectionEvent);
+            NetEventManager.RemoveListener(NetEventType.Authenticated, OnAuthenticationEvent);
+            NetEventManager.RemoveListener(NetEventType.LoggedIn, OnLoginEvent);
+            NetEventManager.RemoveListener(NetEventType.Disconnected, OnConnectionFailed);
+        }
 
         void Start() {
-            addressField.onValidateInput += OnValidateChar;
-            client = networkHolder.GetComponent<LockstepClient>();
-            client.Subscribe(this);
+            loginHandler = GetComponent<LoginManager>();
         }
 
-        public void Signal(IObservable ob, object args) {
-            switch (client.CurrentState) {
-                case ClientState.Connected:
-                    OnConnectionEvent();
-                    break;
-                case ClientState.LoggedIn:
-                    OnLogInEvent();
-                    break;
-                default:
-                    break;
-            }
-        }
+        #endregion
 
         public void OnUsernameChanged() {
             username = usernameField.text;
+        }
+
+        public void OnAddressChanged() {
+            address = addressField.text;
+        }
+
+        public void OnHostGameButtonPressed() {
+            OnUsernameChanged();
+            if (ValidateUsername()) {
+                networkHolder.AddComponent<GameServer>();
+                loginHandler.Login(username, "localhost");
+            }
+        }
+
+        public void OnConnectButtonPressed() {
+            OnUsernameChanged();
+            OnAddressChanged();
+            if (ValidateAddressIPv4() && ValidateUsername()) {
+                loginHandler.Login(username, address);
+            }
+        }
+
+        private void OnConnectionEvent(NetEventArgs args) {
+            print("Successfully connected, logging in...");
+        }
+
+        private void OnAuthenticationEvent(NetEventArgs args) {
+            print("Successfully authenticated!");
+        }
+
+        private void OnLoginEvent(NetEventArgs args) {
+            print("Successfully logged in!");
+            SceneManager.LoadScene(1);
+        }
+
+        private void OnConnectionFailed(NetEventArgs args) {
+            print("Connection failed: " + args.Data.ToString());
         }
 
         public char OnValidateChar(string text, int charIndex, char addedChar) {
@@ -50,42 +90,26 @@ namespace Presentation.UI {
             return current;
         }
 
-        public void OnAddressChanged() {
-            address = addressField.text;
-        }
-
-        public void OnHostGamePressed() {
-            OnUsernameChanged();
-            if (ValidateUsername()) {
-                server = networkHolder.AddComponent<LockstepServer>();
-                PlayerManager.Instance.SetIdentity(new Player(0, username));
-                client.Connect("localhost", server.port);
-            }
-        }
-
-        public void OnConnectPressed() {
-            OnUsernameChanged();
-            OnAddressChanged();
-            if (ValidateAddressIPv4() && ValidateUsername()) {
-                PlayerManager.Instance.SetIdentity(new Player(0, username));
-                client.Connect(address, 28960);
-            }
-        }
-
         private bool ValidateAddressIPv4() {
-            if (string.IsNullOrEmpty(address))
+            if (string.IsNullOrEmpty(address)) {
+                Debug.LogWarning("Invalid ip 1");
                 return false;
+            }
 
             string[] parts = address.Split('.');
-            if (parts.Length != 4)
+            if (parts.Length != 4) {
+                Debug.LogWarning("Invalid ip 2");
                 return false;
+            }
 
             for (uint i = 0; i < parts.Length; i++) {
                 int num;
                 if (!int.TryParse(parts[i], out num) || num.ToString().Length != parts[i].Length || num < 0 || num > 255) {
+                    Debug.LogWarning("Invalid ip 3");
                     return false;
                 }
             }
+            Debug.Log("Valido");
             return true;
         }
 
@@ -95,15 +119,6 @@ namespace Presentation.UI {
                 return false;
             }
             return username.Length <= 50;
-        }
-
-        private void OnConnectionEvent() {
-            print("successfuly connected, logging in...");
-        }
-
-        private void OnLogInEvent() {
-            print("successfully logged in!");
-            SceneManager.LoadSceneAsync(1);
-        }
+        }  
     }
 }

@@ -2,36 +2,26 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Game.Network {
     /// <summary>
     /// Wrapper around NetManager implementing a client architecture.
     /// </summary>
-    public class NetClient : INetEventListener {
-
-        //function delegate for packet handling
-        public delegate void MessageDelegate(EventArgs args);
+    public class NetClient : NetBase {
 
         #region Private variables
 
         private bool connected;
-        private NetManager network;
         private NetPeer server;
-        private Dictionary<NetPacketType, MessageDelegate> handlers;
         private Queue<PacketBase> outputMessages;
 
         #endregion
 
         #region Constructors
 
-        public NetClient(int rate, string key) {
-            network = new NetManager(this, key);
-            connected = false;
-            network.UpdateTime = rate;
-            network.NatPunchEnabled = true;
-            handlers = new Dictionary<NetPacketType, MessageDelegate>();
+        public NetClient(NetConfig config) : base (config){
             outputMessages = new Queue<PacketBase>();
+            connected = false;
         }
 
         #endregion
@@ -46,16 +36,17 @@ namespace Game.Network {
         public void Connect(string address, int port) {
             network.Start();
             network.Connect(address, port);
-            UnityEngine.Debug.Log("Connecting...");
+            NetUtils.DebugWrite(ConsoleColor.Black,"Connecting...");
         }
 
         /// <summary>
-        /// Disconnects the client by stopping the NetManager.
+        /// Disconnects the client by stopping the NetManager and resetting values.
         /// </summary>
         public void Disconnect() {
             if (network != null) {
                 server = null;
                 connected = false;
+                outputMessages.Clear();
                 network.Stop();
             }
         }
@@ -79,20 +70,6 @@ namespace Game.Network {
         }
 
         /// <summary>
-        /// Adds the given function delegate to the dictionary.
-        /// </summary>
-        /// <param name="type">the packet type</param>
-        /// <param name="handler">the function used to handle the given packet type</param>
-        public void Bind(NetPacketType type, MessageDelegate handler) {
-            if (handlers.ContainsKey(type)) {
-                handlers[type] += handler;
-            }
-            else {
-                handlers.Add(type, handler);
-            }
-        }
-
-        /// <summary>
         /// Adds a new message to be sent.
         /// </summary>
         /// <param name="packet">Message to send</param>
@@ -106,10 +83,10 @@ namespace Game.Network {
         /// <param name="packet">the packet to send</param>
         public void Send(PacketBase packet) {
             if (!connected) {
-                Debug.LogWarning("Cannot send, client not connected");
+                NetUtils.DebugWriteError("Cannot send, client not connected!");
                 return;
             }
-            NetDataWriter writer = new NetDataWriter();
+            writer.Reset();
             packet.Serialize(writer);
             server.Send(writer, SendOptions.ReliableUnordered);
         }
@@ -118,46 +95,32 @@ namespace Game.Network {
 
         #region NetListener implementation
 
-        public void OnPeerConnected(NetPeer peer) {
+        public override void OnPeerConnected(NetPeer peer) {
             server = peer;
             connected = true;
-            HandleEvent(NetPacketType.PeerConnect, new ConnectEventArgs());
+            HandleEvent(NetPacketType.PeerConnect, peer, null);
         }
 
-        public void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo) {
+        public override void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo) {
             Disconnect();
-            HandleEvent(NetPacketType.PeerDisconnect, EventArgs.Empty);
+            HandleEvent(NetPacketType.PeerDisconnect, peer, new NetEventArgs(disconnectInfo));
         }
 
-        public void OnNetworkError(NetEndPoint endPoint, int socketErrorCode) {
-            HandleEvent(NetPacketType.NetError, new ErrorEventArgs(socketErrorCode));
+        public override void OnNetworkError(NetEndPoint endPoint, int socketErrorCode) {
+            HandleEvent(NetPacketType.NetError, server, new NetEventArgs(socketErrorCode));
         }
 
-        public void OnNetworkLatencyUpdate(NetPeer peer, int latency) {
-            HandleEvent(NetPacketType.PeerLatency, EventArgs.Empty);
+        public override void OnNetworkLatencyUpdate(NetPeer peer, int latency) {
+            HandleEvent(NetPacketType.PeerLatency, peer, new NetEventArgs(latency));
         }
 
-        public void OnNetworkReceive(NetPeer peer, NetDataReader reader) {
+        public override void OnNetworkReceive(NetPeer peer, NetDataReader reader) {
             NetPacketType type = (NetPacketType)reader.GetUShort();
-            HandleEvent(type, new DataEventArgs(reader));
+            HandleEvent(type, peer, new NetEventArgs(reader));
         }
 
-        public void OnNetworkReceiveUnconnected(NetEndPoint remoteEndPoint, NetDataReader reader, UnconnectedMessageType messageType) {
-            Debug.LogWarning("Received a discovery request, ignoring.");
-        }
-
-        #endregion
-
-        #region Private methods
-
-        private void HandleEvent(NetPacketType type, EventArgs args) {
-            MessageDelegate handler;
-            if (handlers.TryGetValue(type, out handler)) {
-                handler.Invoke(args);
-            }
-            else {
-                Debug.LogWarning("No handler designed for the packet type: " + type);
-            }
+        public override void OnNetworkReceiveUnconnected(NetEndPoint remoteEndPoint, NetDataReader reader, UnconnectedMessageType messageType) {
+            NetUtils.DebugWriteError("Received a discovery request, ignoring.");
         }
 
         #endregion
