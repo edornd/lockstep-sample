@@ -4,35 +4,20 @@ using UnityEngine.UI;
 public class UIMenuLobbyHost : MonoBehaviour {
 
     public Button startGameButton;
-    public Button closeLobbyButton;
-    public Toggle readyToggle;
+    private LobbyManagerHost hostManager;
 
     #region Monobehaviour
 
-    // Use this for initialization
     void Start () {
-	
-	}
-	
-	// Update is called once per frame
-	void Update () {
-	
+        hostManager = GetComponent<LobbyManagerHost>();
 	}
 
     #endregion
 
     #region UI Events
 
-    public void OnReadyToggleChanged() {
-        Debug.Log("Value: " + readyToggle.isOn);
-    }
-
     public void OnStartGameButtonPressed() {
-        Debug.Log("Starting game");
-    }
-
-    public void OnCloseLobbyButtonPressed() {
-        Debug.Log("Close lobby");
+        hostManager.CallStartGame();
     }
 
     #endregion

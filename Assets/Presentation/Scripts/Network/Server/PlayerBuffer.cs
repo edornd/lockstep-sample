@@ -80,6 +80,16 @@ namespace Presentation.Network {
             count = 0;
         }
 
+        public bool ReadyToStart() {
+            for (int i = 0; i < maxSize; i++) {
+                if (playerBuffer[i] != null) {
+                    if (!playerBuffer[i].Ready)
+                        return false;
+                }
+            }
+            return true;
+        }
+
         public IEnumerator<Player> GetEnumerator() {
             for (int i = 0; i < maxSize; i++) {
                 if (playerBuffer[i] != null)

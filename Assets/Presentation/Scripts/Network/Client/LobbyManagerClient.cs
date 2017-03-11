@@ -4,8 +4,17 @@ using LiteNetLib.Utils;
 using Presentation.Network;
 using Game.Network;
 using Game.Players;
+using UnityEngine.SceneManagement;
 
 public class LobbyManagerClient : MonoBehaviour {
+
+    void OnEnable() {
+        GameClient.Register(NetPacketType.GameStart, OnGameStart);
+    }
+
+    void OnDisable() {
+        GameClient.Unregister(NetPacketType.GameStart, OnGameStart);
+    }
 
     public void SetPlayerReady(bool value) {
         Player identity = PlayerManager.Identity;
@@ -17,5 +26,10 @@ public class LobbyManagerClient : MonoBehaviour {
     public void LeaveLobby() {
         NetEventManager.Trigger(NetEventType.LoggedOut, null);
         GameClient.Disconnect();
+    }
+
+    private void OnGameStart(NetPeer peer, NetEventArgs args) {
+        Debug.Log("[CLIENT] Game start received!");
+        SceneManager.LoadSceneAsync(3);
     }
 }

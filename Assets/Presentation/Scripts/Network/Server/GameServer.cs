@@ -80,6 +80,10 @@ namespace Presentation.Network {
             instance.baseServer.Stop();
         }
 
+        public static void StartGame() {
+            instance.StartGameInternal();
+        }
+
         #endregion
 
         #region Handlers
@@ -196,6 +200,17 @@ namespace Presentation.Network {
             clients.Remove(client);
             byte[] data = System.Text.Encoding.ASCII.GetBytes(additionalInfo);
             baseServer.Disconnect(client, data);
+        }
+
+        /// <summary>
+        /// Instance function to start the game if all players are ready.
+        /// </summary>
+        private void StartGameInternal() {
+            if (!instance.players.ReadyToStart()) {
+                UnityEngine.Debug.Log("[SERVER] All clients must be ready in order to start!");
+                return;
+            }
+            instance.baseServer.Send(new NetMessage(new PacketGameStart(instance.serverID)));
         }
 
         #endregion

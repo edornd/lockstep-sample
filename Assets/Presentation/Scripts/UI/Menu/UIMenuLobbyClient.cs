@@ -13,7 +13,6 @@ namespace Presentation.UI {
         public GameObject elementPrefab;
 
         private LobbyManagerClient lobbyManager;
-        private bool readyValue;
 
         #region Monobehaviour
 
@@ -28,7 +27,6 @@ namespace Presentation.UI {
         void Start() {
             UpdatePlayersList();
             lobbyManager = GetComponent<LobbyManagerClient>();
-            readyValue = false;
         }
 
         void OnDisable() {

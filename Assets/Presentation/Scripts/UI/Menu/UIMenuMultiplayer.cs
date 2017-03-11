@@ -73,7 +73,11 @@ namespace Presentation.UI {
 
         private void OnLoginEvent(NetEventArgs args) {
             print("Successfully logged in!");
-            SceneManager.LoadScene(1);
+            if (GameClient.IsHost)
+                SceneManager.LoadScene(2);
+            else {
+                SceneManager.LoadScene(1);
+            }
         }
 
         private void OnConnectionFailed(NetEventArgs args) {
