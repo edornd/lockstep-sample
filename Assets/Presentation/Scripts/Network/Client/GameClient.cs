@@ -1,34 +1,47 @@
 using Game.Network;
-using Game.Players;
+using Game.Utils;
 using LiteNetLib;
-using LiteNetLib.Utils;
 using UnityEngine;
 
 namespace Presentation.Network {
     /// <summary>
     /// Higher level client class, using a NetClient for communication.
     /// </summary>
-    public class GameClient : Singleton<GameClient> {
+    public class GameClient : Singleton<GameClient>, IResettable {
 
+        public GameObject serverPrefab;
         private NetClient baseClient;
+
+        private GameObject serverObject;
+        private bool isHost;
 
         #region MonoBehaviour
 
         void Awake() {
             DontDestroyOnLoad(this.gameObject);
+            //"there can only be one"
+            if (FindObjectsOfType(GetType()).Length > 1) {
+                Destroy(this.gameObject);
+                return;
+            }
             Init();
-            baseClient = new NetClient(NetConfig.ClientDefault);
             PlayerManager.Init();
+            baseClient = new NetClient(NetConfig.ClientDefault);
+            isHost = false;
         }
 
-        void OnEnable() { 
-            baseClient.Bind(NetPacketType.PeerDisconnect, OnDisconnect);
-            baseClient.Bind(NetPacketType.NetError, OnNetworkError);
+        void OnEnable() {
+            if (baseClient != null) {
+                baseClient.Bind(NetPacketType.PeerDisconnect, OnDisconnect);
+                baseClient.Bind(NetPacketType.NetError, OnNetworkError);
+            }
         }
 
         void OnDisable() {
-            baseClient.Unbind(NetPacketType.PeerDisconnect, OnDisconnect);
-            baseClient.Unbind(NetPacketType.NetError, OnNetworkError);
+            if (baseClient != null) {
+                baseClient.Unbind(NetPacketType.PeerDisconnect, OnDisconnect);
+                baseClient.Unbind(NetPacketType.NetError, OnNetworkError);
+            }
         }
 
         void Update() {
@@ -37,30 +50,99 @@ namespace Presentation.Network {
         }
 
         void OnDestroy() {
+            if (baseClient != null)
+                baseClient.Disconnect();
+        }
+
+        #endregion
+
+        #region Instance Methods
+
+        /// <summary>
+        /// Resets the game client instance, destroying any server object.
+        /// </summary>
+        public void Reset() {
             baseClient.Disconnect();
+            if (isHost) {
+                Destroy(serverObject);
+                isHost = false;
+            }
+        }
+
+        /// <summary>
+        /// Instantiates a new server prefab and connects to the newly created server.
+        /// </summary>
+        public void Host() {
+            if (serverObject != null) {
+                Debug.LogWarning("Server GameObject already instantiated!");
+                return;
+            }
+            serverObject = GameObject.Instantiate(serverPrefab, null, false) as GameObject;
+            baseClient.Connect("localhost", serverObject.GetComponent<GameServer>().port);
+            isHost = true;
         }
 
         #endregion
 
         #region Singleton methods
 
+        /// <summary>
+        /// Static reference to the network level, useful to enqueue packets from outside
+        /// this class.
+        /// </summary>
         public static NetClient NetworkClient { get { return Instance.baseClient; } }
 
+        /// <summary>
+        /// Returns true whether the current game is hosting the match.
+        /// </summary>
+        public static bool IsHost { get { return instance.isHost; } }
+
+        /// <summary>
+        /// Tries to connect to the given address and port.
+        /// </summary>
+        /// <param name="hostAddress">ip address</param>
+        /// <param name="hostPort">server port</param>
+        public static void HostGame() {
+            instance.Host();
+        }
+
+        /// <summary>
+        /// Tries to connect to the given address and port.
+        /// </summary>
+        /// <param name="hostAddress">ip address</param>
+        /// <param name="hostPort">server port</param>
         public static void Connect(string hostAddress, int hostPort) {
             instance.baseClient.Connect(hostAddress, hostPort);
         }
 
+        /// <summary>
+        /// Calls the disconnect procedure from the network client and triggers a disconnection event.
+        /// The function iterates through every resettable component, invoking the reset method.
+        /// </summary>
         public static void Disconnect() {
+            foreach (IResettable comp in instance.gameObject.GetComponents<IResettable>()) {
+                comp.Reset();
+            }
             instance.baseClient.Disconnect();
             DisconnectInfo info = new DisconnectInfo();
             info.Reason = DisconnectReason.DisconnectPeerCalled;
             NetEventManager.Trigger(NetEventType.Disconnected, new NetEventArgs(info));
         }
 
+        /// <summary>
+        /// Register an external handler for the given packet type.
+        /// </summary>
+        /// <param name="type">packet type</param>
+        /// <param name="handler">function to add</param>
         public static void Register(NetPacketType type, MessageDelegate handler) {
             instance.baseClient.Bind(type, handler);
         }
 
+        /// <summary>
+        /// Unregister an external handler for the given packet type.
+        /// </summary>
+        /// <param name="type">packet type</param>
+        /// <param name="handler">function to remove</param>
         public static void Unregister(NetPacketType type, MessageDelegate handler) {
             instance.baseClient.Unbind(type, handler);
         }

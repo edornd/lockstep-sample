@@ -22,9 +22,14 @@ namespace Presentation.Network {
             GameClient.Unregister(NetPacketType.GameInfo, OnReceiveGameInfo);
         }
 
-        public void Login(string username, string address) {
-            GameClient.Connect(address, GameServer.DEFAULT_PORT);
+        public void HostGame(string username) {
             this.username = username;
+            GameClient.HostGame();
+        }
+
+        public void Login(string username, string address) {
+            this.username = username;
+            GameClient.Connect(address, GameServer.DEFAULT_PORT);
         }
 
         private void OnConnect(NetPeer peer, NetEventArgs args) {

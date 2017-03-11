@@ -11,7 +11,6 @@ namespace Presentation.UI {
         public InputField addressField;
         public Button hostGameButton;
         public Button connectButton;
-        public GameObject networkHolder;
 
         private string username;
         private string address;
@@ -52,8 +51,7 @@ namespace Presentation.UI {
         public void OnHostGameButtonPressed() {
             OnUsernameChanged();
             if (ValidateUsername()) {
-                networkHolder.AddComponent<GameServer>();
-                loginHandler.Login(username, "localhost");
+                loginHandler.HostGame(username);
             }
         }
 

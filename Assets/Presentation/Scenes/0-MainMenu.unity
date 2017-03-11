@@ -119,6 +119,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26f88efa7927e794181e05657e5582b7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  serverPrefab: {fileID: 1000012289582846, guid: 0c843298471770744a0b07e79494c93b,
+    type: 2}
 --- !u!4 &7355315
 Transform:
   m_ObjectHideFlags: 0
@@ -1404,7 +1406,6 @@ MonoBehaviour:
   addressField: {fileID: 1919863861}
   hostGameButton: {fileID: 1124548685}
   connectButton: {fileID: 467940417}
-  networkHolder: {fileID: 7355313}
 --- !u!4 &1319361279
 Transform:
   m_ObjectHideFlags: 0

@@ -7,10 +7,10 @@ using Game.Players;
 
 public class LobbyManagerClient : MonoBehaviour {
 
-    public void SetPlayerReady() {
+    public void SetPlayerReady(bool value) {
         Player identity = PlayerManager.Identity;
-        identity.SetReady(true);
-        PacketBase readyMessage = new PacketPlayerReady(identity.ID, true);
+        identity.SetReady(value);
+        PacketBase readyMessage = new PacketPlayerReady(identity.ID, value);
         GameClient.NetworkClient.Send(readyMessage);
     }
 

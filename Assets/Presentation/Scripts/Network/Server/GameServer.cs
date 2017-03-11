@@ -1,7 +1,6 @@
-#define DEBUG
-
 using Game.Network;
 using Game.Players;
+using Game.Utils;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using System.Collections.Generic;
@@ -22,6 +21,7 @@ namespace Presentation.Network {
         #region MonoBehaviour
 
         void Awake() {
+            DontDestroyOnLoad(this);
             serverID = 0;
 
             print("Server starting on port " + port + " ...");
@@ -57,8 +57,10 @@ namespace Presentation.Network {
             }
         }
 
-        public void OnApplicationQuit() {
+        void OnDestroy() {
             Stop();
+            players.Reset();
+            clients.Clear();
         }
 
         #endregion

@@ -1,6 +1,8 @@
-using Game.Network;
 using UnityEngine.Events;
 using System.Collections.Generic;
+using Game.Network;
+using Game.Utils;
+using UnityEngine;
 
 public enum NetEventType {
     Connected,
@@ -20,10 +22,20 @@ public class NetEventManager : Singleton<NetEventManager> {
 
     private Dictionary<NetEventType, NetworkEvent> events;
 
-	void Awake () {
+    #region Monobehaviour - Instance methods
+
+    void Awake () {
         events = new Dictionary<NetEventType, NetworkEvent>();
         Init();
 	}
+
+    void Update() {
+        if (Input.GetKeyDown(KeyCode.A)) {
+            foreach(KeyValuePair<NetEventType, NetworkEvent> pair in events) {
+                print(pair.Key + ": " + pair.Value);
+            }
+        }
+    }
 
     void OnDestroy() {
         foreach (UnityEvent<NetEventArgs> e in events.Values) {
@@ -31,6 +43,10 @@ public class NetEventManager : Singleton<NetEventManager> {
         }
         events = null;
     }
+
+    #endregion
+
+    #region Singleton
 
     public static void AddListener(NetEventType type, UnityAction<NetEventArgs> listener) {
         NetworkEvent e = null;
@@ -50,6 +66,9 @@ public class NetEventManager : Singleton<NetEventManager> {
         NetworkEvent e = null;
         if (instance.events.TryGetValue(type, out e)) {
             e.RemoveListener(listener);
+            if (e.GetPersistentEventCount() == 0) {
+               instance.events.Remove(type);
+            }
         }
     }
 
@@ -59,4 +78,6 @@ public class NetEventManager : Singleton<NetEventManager> {
             e.Invoke(args);
         }
     }
+
+    #endregion
 }

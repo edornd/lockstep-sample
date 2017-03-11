@@ -9,10 +9,11 @@ namespace Presentation.UI {
     public class UIMenuLobbyClient : MonoBehaviour {
 
         public VerticalLayoutGroup playersPanel;
-        public Button readyButton;
+        public Toggle readyToggle;
         public GameObject elementPrefab;
 
         private LobbyManagerClient lobbyManager;
+        private bool readyValue;
 
         #region Monobehaviour
 
@@ -27,20 +28,23 @@ namespace Presentation.UI {
         void Start() {
             UpdatePlayersList();
             lobbyManager = GetComponent<LobbyManagerClient>();
+            readyValue = false;
         }
 
         void OnDisable() {
             NetEventManager.RemoveListener(NetEventType.PlayerEnter, OnPlayerEnterOrLeave);
             NetEventManager.RemoveListener(NetEventType.PlayerLeave, OnPlayerEnterOrLeave);
             NetEventManager.RemoveListener(NetEventType.PlayerReady, OnPlayerReady);
+            NetEventManager.RemoveListener(NetEventType.LoggedOut, OnGameLogout);
+            NetEventManager.RemoveListener(NetEventType.Disconnected, OnGameDisconnected);
         }
 
         #endregion
 
         #region UI Events
 
-        public void OnReadyButtonPressed() {
-            lobbyManager.SetPlayerReady();
+        public void OnReadyTogglePressed() {
+            lobbyManager.SetPlayerReady(readyToggle.isOn);
             UpdatePlayersList();
         }
 

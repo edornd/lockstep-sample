@@ -8,13 +8,13 @@ using System.Collections.Generic;
 namespace Presentation.Network {
     public class PlayerManager : Singleton<PlayerManager>, IResettable {
 
-        private PlayersList playersList;
+        private Dictionary<int, Player> players;
         private Player identity;
 
         #region Monobehaviour
 
         void Awake() {
-            playersList = new PlayersList();
+            players = new Dictionary<int, Player>();
         }
 
         void OnEnable() {
@@ -28,7 +28,10 @@ namespace Presentation.Network {
             GameClient.Unregister(NetPacketType.PlayerEnter, OnPlayerEnter);
             GameClient.Unregister(NetPacketType.PlayerLeave, OnPlayerLeave);
             GameClient.Unregister(NetPacketType.PlayerReady, OnPlayerReady);
+        }
 
+        void OnDestroy() {
+            Reset();
         }
 
         #endregion
@@ -36,7 +39,7 @@ namespace Presentation.Network {
         #region Resettable
 
         public void Reset() {
-            this.playersList.Reset();
+            players.Clear();
             identity = null;
         }
 
@@ -49,7 +52,7 @@ namespace Presentation.Network {
         }
 
         public static Dictionary<int, Player> Players {
-            get { return instance.playersList.Players; }
+            get { return instance.players; }
         }
 
         public static void SetIdentity(Player identity) {
@@ -65,7 +68,7 @@ namespace Presentation.Network {
             if (message.Player.ID == identity.ID) {
                 SetIdentity(message.Player);
             }
-            playersList.AddPlayer(message.Player);
+            players.Add(message.Player.ID, message.Player);
             NetEventManager.Trigger(NetEventType.PlayerEnter, args);
         }
 
@@ -75,14 +78,14 @@ namespace Presentation.Network {
                 UnityEngine.Debug.LogWarning("Dafuq, I can't leave myself!");
                 return;
             }
-            playersList.RemovePlayer(message.Player);
+            players.Remove(message.Player.ID);
             NetEventManager.Trigger(NetEventType.PlayerLeave, args);
         }
 
         private void OnPlayerReady(NetPeer peer, NetEventArgs args) {
             PacketPlayerReady message = PacketBase.Read<PacketPlayerReady>((NetDataReader)(args.Data));
             Player player = null;
-            if (playersList.Players.TryGetValue(message.Sender, out player)) {
+            if (players.TryGetValue(message.Sender, out player)) {
                 player.SetReady(message.Value);
                 NetEventManager.Trigger(NetEventType.PlayerReady, args);
             }

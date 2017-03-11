@@ -36,7 +36,6 @@ namespace Game.Network {
         public void Connect(string address, int port) {
             network.Start();
             network.Connect(address, port);
-            NetUtils.DebugWrite(ConsoleColor.Black,"Connecting...");
         }
 
         /// <summary>
