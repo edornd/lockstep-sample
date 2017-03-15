@@ -2,7 +2,7 @@ using Game;
 using System.Threading;
 using UnityEngine;
 
-public class SimulationHandler : MonoBehaviour {
+public class SimulationHolder : MonoBehaviour {
 
     private Simulation game;
     private Thread gameThread;
@@ -25,6 +25,8 @@ public class SimulationHandler : MonoBehaviour {
     }
 
     private void BeginSimulation() {
+        if (Simulation.Instance == null)
+            Simulation.Create();
         game = Simulation.Instance;
         gameThread = new Thread(game.Run);
         gameThread.Start();

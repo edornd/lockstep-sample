@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Game.Lockstep {
     /// <summary>
@@ -7,7 +8,7 @@ namespace Game.Lockstep {
     /// </summary>
     public class CommandList {
 
-        private short readyFlag;
+        private int readyFlag;
         private List<CommandBase> commands;
 
         public CommandList() {
@@ -20,13 +21,16 @@ namespace Game.Lockstep {
         /// the relative player's flag is set.
         /// </summary>
         /// <param name="command"></param>
-        public void AddCommand(CommandBase command) {
-            if (command.Type == CommandType.Done) {
-                //set flag of the given player using cmd.source
-            }
-            else {
-                commands.Add(command);
-            }
+        public void AddCommand(CommandBase command, int source) {
+            // if (command.Type == CommandType.Done) {
+            //    readyFlag |= (int)(Mathf.Pow(2, source - 1));
+            //}
+            commands.Add(command);
+        }
+
+        public void Clear() {
+            this.commands.Clear();
+            readyFlag = 0;
         }
 
         /// <summary>
@@ -34,8 +38,17 @@ namespace Game.Lockstep {
         /// </summary>
         /// <returns>true if the flag is equal to a certain value, false otherwise</returns>
         public bool IsComplete() {
-            //check the readyFlag for a certain value
-            return false;
+            //check the readyFlag for a certain value (based on the number of players).
+            return readyFlag == CommandBuffer.ReadyValue;
+        }
+
+        public override string ToString() {
+            string res = "[";
+            foreach (CommandBase cmd in commands) {
+                res += cmd.ToString();
+                res += " ";
+            }
+            return res+"]";
         }
     }
 }

@@ -7,7 +7,7 @@ namespace Presentation.Network {
     /// <summary>
     /// Higher level client class, using a NetClient for communication.
     /// </summary>
-    public class GameClient : Singleton<GameClient>, IResettable {
+    public class GameClient : SingletonMono<GameClient>, IResettable {
 
         public GameObject serverPrefab;
         private NetClient baseClient;
@@ -127,6 +127,14 @@ namespace Presentation.Network {
             DisconnectInfo info = new DisconnectInfo();
             info.Reason = DisconnectReason.DisconnectPeerCalled;
             NetEventManager.Trigger(NetEventType.Disconnected, new NetEventArgs(info));
+        }
+
+        /// <summary>
+        /// Adds the given message to the output queue of the network client.
+        /// </summary>
+        /// <param name="message">packet to be sent</param>
+        public static void Send(PacketBase message) {
+            instance.baseClient.AddOutputMessage(message);
         }
 
         /// <summary>

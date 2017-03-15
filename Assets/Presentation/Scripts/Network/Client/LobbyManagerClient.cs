@@ -20,7 +20,7 @@ public class LobbyManagerClient : MonoBehaviour {
         Player identity = PlayerManager.Identity;
         identity.SetReady(value);
         PacketBase readyMessage = new PacketPlayerReady(identity.ID, value);
-        GameClient.NetworkClient.Send(readyMessage);
+        GameClient.Send(readyMessage);
     }
 
     public void LeaveLobby() {

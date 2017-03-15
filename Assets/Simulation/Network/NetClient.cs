@@ -14,6 +14,7 @@ namespace Game.Network {
         private bool connected;
         private NetPeer server;
         private Queue<PacketBase> outputMessages;
+        private object outputLock;
 
         #endregion
 
@@ -21,6 +22,7 @@ namespace Game.Network {
 
         public NetClient(NetConfig config) : base (config){
             outputMessages = new Queue<PacketBase>();
+            outputLock = new object();
             connected = false;
         }
 
@@ -45,7 +47,9 @@ namespace Game.Network {
             if (network != null) {
                 server = null;
                 connected = false;
-                outputMessages.Clear();
+                lock (outputLock) {
+                    outputMessages.Clear();
+                }
                 network.Stop();
             }
         }
@@ -63,8 +67,10 @@ namespace Game.Network {
         public void SendMessages() {
             if (!connected || server.ConnectionState != ConnectionState.Connected)
                 return;
-            while (outputMessages.Count > 0) {
-                Send(outputMessages.Dequeue());
+            lock (outputLock) {
+                while (outputMessages.Count > 0) {
+                    Send(outputMessages.Dequeue());
+                }
             }
         }
 
@@ -73,7 +79,9 @@ namespace Game.Network {
         /// </summary>
         /// <param name="packet">Message to send</param>
         public void AddOutputMessage(PacketBase packet) {
-            this.outputMessages.Enqueue(packet);
+            lock (outputLock) {
+                this.outputMessages.Enqueue(packet);
+            }
         }
 
         /// <summary>

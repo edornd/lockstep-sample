@@ -1,29 +1,21 @@
-using UnityEngine;
+namespace Game.Utils {
+    public class Singleton<T> where T : IGameBehaviour {
+        protected static T instance;
 
-public class Singleton<T> : MonoBehaviour where T : MonoBehaviour {
-    protected static T instance;
-
-    /**
-       Returns the instance of this singleton.
-    */
-    public static T Instance {
-        get {
-            if (instance == null) {
-                Init();
-
+        public T Instance {
+            get {
                 if (instance == null) {
-                    Debug.LogError("An instance of " + typeof(T) +
-                       " is needed in the scene, but there is none.");
+                    instance = (T)Simulation.GetObjectOfType(typeof(T));
+                    if (instance == null) {
+                        UnityEngine.Debug.Log("No instance of " + typeof(T) + " running in the simulation");
+                    }
                 }
+                return instance;
             }
-
-            return instance;
         }
-    }
 
-    public static void Init() {
-        if (!instance) {
-            instance = (T)FindObjectOfType(typeof(T));
+        public static void InitSingleton() {
+            instance = (T)Simulation.GetObjectOfType(typeof(T));
         }
     }
 }

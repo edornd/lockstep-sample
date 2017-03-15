@@ -18,7 +18,7 @@ public enum NetEventType {
 
 public class NetworkEvent : UnityEvent<NetEventArgs> { }
 
-public class NetEventManager : Singleton<NetEventManager> {
+public class NetEventManager : SingletonMono<NetEventManager> {
 
     private Dictionary<NetEventType, NetworkEvent> events;
 
@@ -28,14 +28,6 @@ public class NetEventManager : Singleton<NetEventManager> {
         events = new Dictionary<NetEventType, NetworkEvent>();
         Init();
 	}
-
-    void Update() {
-        if (Input.GetKeyDown(KeyCode.A)) {
-            foreach(KeyValuePair<NetEventType, NetworkEvent> pair in events) {
-                print(pair.Key + ": " + pair.Value);
-            }
-        }
-    }
 
     void OnDestroy() {
         foreach (UnityEvent<NetEventArgs> e in events.Values) {

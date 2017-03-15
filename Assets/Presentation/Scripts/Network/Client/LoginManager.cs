@@ -35,7 +35,7 @@ namespace Presentation.Network {
         private void OnConnect(NetPeer peer, NetEventArgs args) {
             NetEventManager.Trigger(NetEventType.Connected, args);
             PacketBase message = new PacketAuth(0, username, 0);
-            GameClient.NetworkClient.Send(message);
+            GameClient.Send(message);
         }
 
         private void OnClientAuthenticated(NetPeer peer, NetEventArgs args) {

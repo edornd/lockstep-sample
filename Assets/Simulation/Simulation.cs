@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Collections.Generic;
 using Game.Lockstep;
+using System;
+using Game.Utils;
 
 namespace Game {
     /// <summary>
@@ -25,12 +27,19 @@ namespace Game {
 
         #region singleton
 
-        private static Simulation instance = new Simulation();
+        private static Simulation instance;
+
+        public static void Create() {
+            instance = new Simulation();
+        }
+
+        public static void Create(double delta, double maxDelta) {
+            instance = new Simulation(delta, maxDelta);
+        }
 
         public static Simulation Instance {
             get { return instance; }
         }
-
 
         public static double DeltaTime {
             get { return instance.targetTime; }
@@ -44,11 +53,20 @@ namespace Game {
             instance.entities.Remove(entity);
         }
 
+        public static IGameBehaviour GetObjectOfType(Type type) {
+            foreach(IGameBehaviour entity in instance.entities) {
+                if (entity.GetType().Equals(type)) {
+                    return entity;
+                }
+            }
+            return null;
+        }
+
         #endregion
 
         #region constructors
 
-        public Simulation() : this(0.02, 0.25) { }
+        public Simulation() : this(0.1, 0.25) { }
 
         public Simulation(double deltaTime, double maxTime) {
             running = true;
@@ -88,6 +106,13 @@ namespace Game {
         }
 
         public void Init() {
+            //create objects and add them to the simulation list
+            lockstep = new LockstepLogic();
+            Register(lockstep);
+
+            //initialize singleton instances
+            LockstepLogic.InitSingleton();
+
             foreach (IGameBehaviour entity in entities) {
                 entity.Init();
             }
