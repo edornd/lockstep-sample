@@ -38,8 +38,7 @@ namespace Presentation.Network {
 
             baseServer.Bind(NetPacketType.PeerAuth, OnClientAuthRequest);
             baseServer.Bind(NetPacketType.PlayerReady, OnClientReady);
-            baseServer.Bind(NetPacketType.GameCmd, OnClientCommand);
-            baseServer.Bind(NetPacketType.TurnDone, OnClientDoneTurn);
+            baseServer.Bind(NetPacketType.TurnData, OnClientTurnData);
         }
 
         void OnDisable() {
@@ -49,9 +48,7 @@ namespace Presentation.Network {
 
             baseServer.Unbind(NetPacketType.PeerAuth, OnClientAuthRequest);
             baseServer.Unbind(NetPacketType.PlayerReady, OnClientReady);
-            baseServer.Unbind(NetPacketType.GameCmd, OnClientCommand);
-            baseServer.Unbind(NetPacketType.TurnDone, OnClientDoneTurn);
-
+            baseServer.Unbind(NetPacketType.TurnData, OnClientTurnData);
         }
 
         void Update() {
@@ -193,19 +190,12 @@ namespace Presentation.Network {
         }
 
         /// <summary>
-        /// Received a command from a player. The server sends to everyone,
-        /// except the original sender.
+        /// Received turn information, simply forwards it to every other client.
         /// </summary>
         /// <param name="client">sender</param>
-        /// <param name="args">packet containing the command</param>
-        private void OnClientCommand(NetPeer client, NetEventArgs args) {
-            PacketGameCmd message = PacketBase.Read<PacketGameCmd>((NetDataReader)(args.Data));
-            baseServer.SendExcluding(new NetMessage(message, client));
-        }
-
-        private void OnClientDoneTurn(NetPeer client, NetEventArgs args) {
-            PacketTurnDone message = PacketBase.Read<PacketTurnDone>((NetDataReader)(args.Data));
-            baseServer.SendExcluding(new NetMessage(message, client));
+        /// <param name="args">wrapper containing a data reader</param>
+        private void OnClientTurnData(NetPeer client, NetEventArgs args) {
+            baseServer.ForwardRawData((NetDataReader)(args.Data), client);
         }
 
         #endregion

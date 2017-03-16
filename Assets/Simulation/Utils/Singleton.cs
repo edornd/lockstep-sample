@@ -2,7 +2,7 @@ namespace Game.Utils {
     public class Singleton<T> where T : IGameBehaviour {
         protected static T instance;
 
-        public T Instance {
+        public static T Instance {
             get {
                 if (instance == null) {
                     instance = (T)Simulation.GetObjectOfType(typeof(T));

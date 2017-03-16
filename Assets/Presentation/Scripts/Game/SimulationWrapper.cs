@@ -2,21 +2,16 @@ using Game;
 using System.Threading;
 using UnityEngine;
 
-public class SimulationHolder : MonoBehaviour {
+public class SimulationWrapper : MonoBehaviour {
+
+    public int frameLength = 50;
+    public int maxFrames = 4;
 
     private Simulation game;
     private Thread gameThread;
 
-	// Use this for initialization
-	void Start () {
+	void Awake () {
         BeginSimulation();
-	}
-	
-	// Update is called once per frame
-	void Update () {
-	    if (Input.GetKeyDown(KeyCode.S)) {
-            StopSimulation();
-        }
 	}
 
     void OnApplicationQuit() {
@@ -25,8 +20,10 @@ public class SimulationHolder : MonoBehaviour {
     }
 
     private void BeginSimulation() {
-        if (Simulation.Instance == null)
-            Simulation.Create();
+        if (Simulation.Instance == null) {
+            double delta = frameLength / 1000.0;
+            Simulation.Create(delta, delta * 2, maxFrames);
+        }
         game = Simulation.Instance;
         gameThread = new Thread(game.Run);
         gameThread.Start();

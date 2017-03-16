@@ -1,8 +1,9 @@
-using System.Diagnostics;
-using System.Collections.Generic;
 using Game.Lockstep;
 using System;
-using Game.Utils;
+using System.Threading;
+using System.Diagnostics;
+using System.Collections.Generic;
+using Presentation.Network;
 
 namespace Game {
     /// <summary>
@@ -20,6 +21,7 @@ namespace Game {
         private double accumulator;
         private double totalTime;
 
+        private int myIdentity;
         private List<IGameBehaviour> entities;
         private LockstepLogic lockstep;
 
@@ -33,8 +35,8 @@ namespace Game {
             instance = new Simulation();
         }
 
-        public static void Create(double delta, double maxDelta) {
-            instance = new Simulation(delta, maxDelta);
+        public static void Create(double delta, double maxDelta, int numFrames) {
+            instance = new Simulation(delta, maxDelta, numFrames);
         }
 
         public static Simulation Instance {
@@ -62,13 +64,17 @@ namespace Game {
             return null;
         }
 
+        public static int Identity {
+            get { return instance.myIdentity; }
+        }
+
         #endregion
 
         #region constructors
 
-        public Simulation() : this(0.1, 0.25) { }
+        public Simulation() : this(0.1, 0.25, 4) { }
 
-        public Simulation(double deltaTime, double maxTime) {
+        public Simulation(double deltaTime, double maxTime, int numFrames) {
             running = true;
             accumulator = 0.0;
             totalTime = 0.0;
@@ -76,12 +82,16 @@ namespace Game {
             maximumTime = maxTime;
             stopwatch = new Stopwatch();
             entities = new List<IGameBehaviour>();
+            lockstep = new LockstepLogic(numFrames);
         }
 
         #endregion
 
         #region instance methods
 
+        /// <summary>
+        /// Main thread loop, the cycle continues until the game is stopped.
+        /// </summary>
         public void Run() {
             Init();
             while(running) {
@@ -93,6 +103,7 @@ namespace Game {
                     totalTime += targetTime;
                     accumulator -= targetTime;
                 }
+                Thread.Sleep(1);
             }
             Quit();
         }
@@ -106,25 +117,32 @@ namespace Game {
         }
 
         public void Init() {
-            //create objects and add them to the simulation list
-            lockstep = new LockstepLogic();
-            Register(lockstep);
+            //get the client's ID, so that we can use it inside the sim thread
+            myIdentity = PlayerManager.Identity.ID;
 
             //initialize singleton instances
+            Register(lockstep);
             LockstepLogic.InitSingleton();
 
+            //run init on every entity
             foreach (IGameBehaviour entity in entities) {
                 entity.Init();
             }
             stopwatch.Start();
         }
 
+        /// <summary>
+        /// Calss update for every registered entity.
+        /// </summary>
         public void Update() {
             foreach (IGameBehaviour entity in entities) {
                 entity.Update();
             }
         }
 
+        /// <summary>
+        /// Stops the timing mechanism and calls the quit function on every entity.
+        /// </summary>
         public void Quit() {
             stopwatch.Stop();
             foreach (IGameBehaviour entity in entities) {
@@ -132,6 +150,10 @@ namespace Game {
             }
         }
 
+        /// <summary>
+        /// Gets the amount of time elapsed from the previous call.
+        /// </summary>
+        /// <returns>time elapsed in seconds</returns>
         private double GetElapsedTime() {
             double time = stopwatch.Elapsed.TotalSeconds;
             stopwatch.Reset();

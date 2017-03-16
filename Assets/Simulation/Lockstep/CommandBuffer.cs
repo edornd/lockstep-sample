@@ -1,4 +1,4 @@
-using UnityEngine;
+using System.Collections.Generic;
 
 namespace Game.Lockstep {
     /// <summary>
@@ -6,38 +6,34 @@ namespace Game.Lockstep {
     /// </summary>
     public class CommandBuffer {
 
-        private static int readyValue;
-        private CommandList[] commands;
-        private int size;
+        private TurnData[] turnCommands;
+        private int bufferSize;
+        private int numPlayers;
+        private int position;
 
-        public CommandBuffer(int bufferSize, int numPlayers) {
-            this.size = bufferSize;
-            this.commands = new CommandList[size];
-            for (uint i = 0; i < commands.Length; i++) {
-                commands[i] = new CommandList();
+        private object bufferLock;
+
+        public CommandBuffer(int lookAhead, int numPlayers) {
+            this.bufferSize = lookAhead*2;
+            this.numPlayers = numPlayers;
+            this.turnCommands = new TurnData[this.bufferSize];
+            for (uint i = 0; i < bufferSize; i++) {
+                turnCommands[i] = new TurnData(numPlayers);
             }
-            readyValue = (int)(Mathf.Pow(2,numPlayers)) - 1;
+            position = 0;
+            bufferLock = new object();
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public static int ReadyValue { get { return readyValue; } }
 
         /// <summary>
         /// Inserts the given command in the correct list, checking the scheduled turn ID.
         /// </summary>
         /// <param name="command">command to schedule</param>
-        public void Insert(CommandBase command, int source) {
-            int offset =(int)(command.Turn - LockstepLogic.CurrentTurn);
-            if (offset < 0) {
-                Debug.LogWarning("Turn " + command.Turn + " l'e gio' pasa'!");
-            }
-            else if (offset >= size) {
-                Debug.LogWarning("Trop luntan!");
-            }
-            else {
-                commands[offset].AddCommand(command, source);
+        public void Insert(List<CommandBase> commands, long scheduledTurn, int source) {
+            lock (bufferLock) {
+                int offset = (int)scheduledTurn % bufferSize;
+                if (turnCommands[offset].Count < numPlayers) {
+                    turnCommands[offset].Insert(commands, source);
+                }
             }
         }
 
@@ -45,22 +41,23 @@ namespace Game.Lockstep {
         /// Shifts the command buffer to the left, returning the commands stored in the first list.
         /// </summary>
         /// <returns>commands for the current turn</returns>
-        public CommandList Advance() {
-            CommandList current = commands[0];
-            for (int i = 0; i < commands.Length-1; i++) {
-                commands[i] = commands[i + 1];
+        public TurnData Advance() {
+            lock (bufferLock) {
+                TurnData current = turnCommands[position];
+                turnCommands[position] = new TurnData(numPlayers);
+                position = (position + 1) % bufferSize;
+                return current;
             }
-            commands[commands.Length-1] = new CommandList();
-            return current;
         }
 
         /// <summary>
-        /// Checks whether the first list (representing the current turn) is complete
-        /// and ready to be processed.
+        /// Check if the buffer is ready to advance to the next turn.
         /// </summary>
-        /// <returns>true if the list is complete, false otherwise</returns>
-        public bool IsReady() {
-            return commands[0].IsComplete();
+        /// <returns></returns>
+        public bool IsReadyToAdvance() {
+            lock (bufferLock) {
+                return turnCommands[position].Count == numPlayers;
+            }
         }
     }
 }

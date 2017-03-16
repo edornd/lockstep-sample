@@ -12,8 +12,7 @@ namespace Game.Network {
         GameStart,
         GamePause,
         GameStop,
-        GameCmd,
-        TurnDone,
+        TurnData,
         NetError
     }
 }

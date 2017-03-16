@@ -111,6 +111,13 @@ namespace Game.Network {
             }
         }
 
+        public void ForwardRawData(NetDataReader reader, NetPeer sender) {
+            foreach (NetPeer client in clients) {
+                if (client != sender)
+                    SendRaw(client, reader);
+            }
+        }
+
         public void Disconnect(NetPeer peer, byte[] extra) {
             network.DisconnectPeer(peer, extra);
         }
@@ -128,7 +135,18 @@ namespace Game.Network {
         private void Send(NetPeer client, PacketBase packet) {
             writer.Reset();
             packet.Serialize(writer);
-            client.Send(writer, SendOptions.ReliableUnordered);
+            client.Send(writer, SendOptions.ReliableOrdered);
+        }
+
+        /// <summary>
+        /// Sends raw data to the given client by simply copying the bytes to the writer.
+        /// </summary>
+        /// <param name="client">receiver</param>
+        /// <param name="reader">serialized data to be sent</param>
+        private void SendRaw(NetPeer client, NetDataReader reader) {
+            writer.Reset();
+            writer.Put(reader.Data);
+            client.Send(writer, SendOptions.ReliableOrdered);
         }
 
         #endregion

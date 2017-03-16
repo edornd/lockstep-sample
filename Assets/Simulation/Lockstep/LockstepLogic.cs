@@ -1,6 +1,8 @@
+using System;
 using Game.Utils;
 using Presentation;
 using Presentation.Network;
+using System.Collections.Generic;
 
 namespace Game.Lockstep {
     /// <summary>
@@ -11,163 +13,131 @@ namespace Game.Lockstep {
         #region Variables
         private int identity;
 
-        private ulong turnID;
-        private ulong lastTurnID;
+        private long currentTurn;
+        private long lastTurn;
 
-        private uint frame;
-        private readonly uint maxFrames = 10;
-        private bool[] playersReady;
+        private int currentFrame;
+        private int framesPerTurn;
         private CommandBuffer buffer;
+        private TurnData currentData;
+        private List<CommandBase> pendingCommands;
 
-        private object lockTurnID;
-        private object lockBuffer;
-        private object lockReady;
-
-        #endregion
-
-        #region Singleton - Static methods
-
-        public static ulong CurrentTurn { get { return instance.CurrentTurnInternal; } }
-
-        public static void Insert(CommandBase command, int source) {
-            instance.InsertInternal(command, source);
-        }
-
-        public static void SetPlayerDone(int id) {
-            instance.SetPlayerDoneInternal(id);
-        }
+        private object lockTurn;
+        private object lockPending;
 
         #endregion
 
         #region Constructors
 
-        public LockstepLogic() {
-            buffer = new CommandBuffer((int)maxFrames, PlayerManager.PlayerCount);
-            playersReady = new bool[PlayerManager.PlayerCount];
+        public LockstepLogic(int frames) {
+            framesPerTurn = frames;
             identity = PlayerManager.Identity.ID;
-            lockTurnID = new object();
-            lockBuffer = new object();
-            lockReady = new object();
+            buffer = new CommandBuffer(2, PlayerManager.PlayerCount);
+            pendingCommands = new List<CommandBase>();
+
+            lockTurn = new object();
+            lockPending = new object();
+        }
+
+        #endregion
+
+        #region Game Behaviour
+
+        /// <summary>
+        /// Initializes the lockstep variables.
+        /// The turn starts from -2 to allow commands to be scheduled for turn 0.
+        /// </summary>
+        public void Init() {
+            currentTurn = -2;
+            lastTurn = -3;
+            currentFrame = 0;
+        }
+
+        /// <summary>
+        /// Tries to step forward with the game.
+        /// </summary>
+        public void Update() {
+            if (IsLockstepturn()) {
+                SendPendingCommands();
+                //Execute an actual turn only after the first two starting rounds
+                if (currentTurn >= 0) {
+                    if (!IsLockstepReady()) {
+                        //state: delay
+                        UnityEngine.Debug.LogWarning("Not ready for next turn!");
+                        return;
+                    }
+                    currentData = buffer.Advance();
+                    //process commands checking integrity
+                    //we are ready to step forward
+                    NextTurn();
+                }
+                //we are still in the starting turns, advance without processing
+                else {
+                    NextTurn();
+                }
+            }
+            NextFrame();
+        }
+
+        /// <summary>
+        /// Deletes everything lockstep related.
+        /// </summary>
+        public void Quit() {
+
         }
 
         #endregion
 
         #region Lockstep
 
-        public void Init() {
-            turnID = 0;
-            frame = 0;
-        }
-
-        public void Update() {
-            if (IsLockstepTurn()) {
-                SendTurnDone();
-                if (!IsLockstepReady())
-                    return;
-                //process commands, physics...
-                CommandList commands = buffer.Advance();
-                //UnityEngine.Debug.Log(commands);
-                NextTurn();
-            }
-            NextFrame();
-        }
-
-        public void Quit() { }
-
-        /// <summary>
-        /// Advance to the next frame, the counter needs to be from 0 to 3.
-        /// </summary>
-        private void NextFrame() {
-            frame = (frame + 1) % maxFrames;
-        }
-
-        /// <summary>
-        /// Advance to the next turn.
-        /// </summary>
-        private void NextTurn() {
-            lock (lockTurnID) {
-                lastTurnID = turnID;
-                turnID++;
+        private long CurrentTurn {
+            get {
+                lock (lockTurn) {
+                    return currentTurn;
+                }
             }
         }
 
-        private void SendTurnDone() {
-            ulong current = CurrentTurn;
-            SetPlayerDoneInternal(identity);
-            Scheduler.SendTurnDone(current);
+        private bool IsLockstepturn() {
+            return currentFrame == 0;
         }
 
-        /// <summary>
-        /// Check if the current game frame is a lockstep frame.
-        /// Lockstep frames are executed every "maxFrames" times to process every command.
-        /// </summary>
-        /// <returns></returns>
-        private bool IsLockstepTurn() {
-            ulong current = CurrentTurn;
-            if (current == lastTurnID && current != 0)
-                return false;
-            return frame == 0;
-        }
-
-        /// <summary>
-        /// Check the conditions for the next turn.
-        /// 1 - every command was successfully received.
-        /// 2 - every player sent done.
-        /// </summary>
-        /// <returns></returns>
         private bool IsLockstepReady() {
-            if (CurrentTurn == 0)
-                return true;
+            return buffer.IsReadyToAdvance();
+        }
 
-            lock (lockReady) {
-                UnityEngine.Debug.Log("are they ready?");
-                for (int i = 0; i < playersReady.Length; i++) {
-                    if (!playersReady[i]) {
-                        UnityEngine.Debug.LogWarning("player " + (i + 1) + " not ready!");
-                        return false;
-                    }
-                }
-                //if we got here everybody was ready, reset.
-                for (int i= 0; i < playersReady.Length; i++){
-                    playersReady[i] = false;
-                }
+        private void NextTurn() {
+            lock (lockTurn) {
+                lastTurn = currentTurn;
+                currentTurn++;
             }
-            return true;
-            //return buffer.IsReady();
+        }
+
+        private void NextFrame() {
+            currentFrame = (currentFrame + 1) % framesPerTurn;
+        }
+
+        private void SendPendingCommands() {
+            lock (lockPending) {
+                long turn = CurrentTurn+2;
+                Scheduler.Instance.SendPendingCommands(pendingCommands, turn);
+                Insert(pendingCommands, turn, identity);
+                pendingCommands = new List<CommandBase>();
+            }
         }
 
         #endregion
 
-        #region Instance functions
+        #region Thread Communication
 
-        private ulong CurrentTurnInternal {
-            get {
-                lock (lockTurnID) {
-                    return turnID;
-                }
+        public void AddPendingCommand(CommandBase command) {
+            lock (lockPending) {
+                pendingCommands.Add(command);
             }
         }
 
-        /// <summary>
-        /// Instance function called by the static reference.
-        /// </summary>
-        /// <param name="command">comand to be added</param>
-        /// <param name="source">player that sent it</param>
-        private void InsertInternal(CommandBase command, int source) {
-            lock (lockBuffer) {
-                buffer.Insert(command, source);
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="turn"></param>
-        private void SetPlayerDoneInternal(int id) {
-            lock(lockReady) {
-                playersReady[id - 1] = true;
-            }
+        public void Insert(List<CommandBase> commands, long scheduledTurn, int playerID) {
+            buffer.Insert(commands, scheduledTurn, playerID);
         }
 
         #endregion

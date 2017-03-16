@@ -6,13 +6,13 @@ namespace Game.Lockstep {
     public abstract class CommandBase : ICommand, IEncodable{
 
         protected CommandType type;
-        protected ulong turn;
+        protected long turn;
 
         #region Constructors
 
         public CommandBase() { }
 
-        public CommandBase(CommandType type, ulong turn) {
+        public CommandBase(CommandType type, long turn) {
             this.type = type;
             this.turn = turn;
         }
@@ -26,7 +26,7 @@ namespace Game.Lockstep {
             set { type = value; }
         }
 
-        public ulong Turn {
+        public long Turn {
             get { return turn; }
             set { turn = value; }
         }
@@ -43,7 +43,7 @@ namespace Game.Lockstep {
         }
 
         public virtual void Deserialize(NetDataReader reader) {
-            turn = reader.GetULong();
+            turn = reader.GetLong();
         }
 
         #endregion
