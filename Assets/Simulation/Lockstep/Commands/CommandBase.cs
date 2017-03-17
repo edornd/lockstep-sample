@@ -2,19 +2,21 @@ using Game.Network;
 using LiteNetLib.Utils;
 
 namespace Game.Lockstep {
-
-    public abstract class CommandBase : ICommand, IEncodable{
+    /// <summary>
+    /// Abstract class representing a generic command.
+    /// </summary>
+    public abstract class Command : ICommand, IEncodable{
 
         protected CommandType type;
-        protected long turn;
+        protected int source;
 
         #region Constructors
 
-        public CommandBase() { }
+        public Command() { }
 
-        public CommandBase(CommandType type, long turn) {
+        public Command(CommandType type, int playerID) {
             this.type = type;
-            this.turn = turn;
+            this.source = playerID;
         }
 
         #endregion
@@ -26,45 +28,35 @@ namespace Game.Lockstep {
             set { type = value; }
         }
 
-        public long Turn {
-            get { return turn; }
-            set { turn = value; }
+        public int Source {
+            get { return source; }
+            set { source = value; }
         }
 
         #endregion
 
         #region Public methods
 
+        /// <summary>
+        /// Abstract function for the command execution.
+        /// Every command has its own implementation.
+        /// </summary>
         public abstract void Process();
 
+        /// <summary>
+        /// Serializes the generic command values (type and turn).
+        /// </summary>
+        /// <param name="writer">writer containing the byte buffer</param>
         public virtual void Serialize(NetDataWriter writer) {
             writer.Put((ushort)type);
-            writer.Put(turn);
         }
 
+        /// <summary>
+        /// Doesn't need to do anything, the type is already extracted on creation,
+        /// source and turn are assigned fro mthe packet.
+        /// </summary>
+        /// <param name="reader">reader containing the byte buffer</param>
         public virtual void Deserialize(NetDataReader reader) {
-            turn = reader.GetLong();
-        }
-
-        #endregion
-
-        #region Static reader
-
-        public static T Read<T>(NetDataReader reader) where T : CommandBase, new() {
-            T command = new T();
-            command.Deserialize(reader);
-            return command;
-        }
-
-        public static CommandBase Read(NetDataReader reader) {
-            CommandType type = (CommandType)(reader.GetUShort());
-            switch (type) {
-                case CommandType.Test:
-                    return Read<CommandTest>(reader);
-                default:
-                    UnityEngine.Debug.Log("L'é sciapase tut! Sei nen co l'é: " + type);
-                    return null;
-            }
         }
 
         #endregion

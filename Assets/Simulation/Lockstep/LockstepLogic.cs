@@ -20,7 +20,7 @@ namespace Game.Lockstep {
         private int framesPerTurn;
         private CommandBuffer buffer;
         private TurnData currentData;
-        private List<CommandBase> pendingCommands;
+        private List<Command> pendingCommands;
 
         private object lockTurn;
         private object lockPending;
@@ -33,7 +33,7 @@ namespace Game.Lockstep {
             framesPerTurn = frames;
             identity = PlayerManager.Identity.ID;
             buffer = new CommandBuffer(2, PlayerManager.PlayerCount);
-            pendingCommands = new List<CommandBase>();
+            pendingCommands = new List<Command>();
 
             lockTurn = new object();
             lockPending = new object();
@@ -68,6 +68,7 @@ namespace Game.Lockstep {
                     }
                     currentData = buffer.Advance();
                     //process commands checking integrity
+                    currentData.ProcessCommands();
                     //we are ready to step forward
                     NextTurn();
                 }
@@ -122,7 +123,7 @@ namespace Game.Lockstep {
                 long turn = CurrentTurn+2;
                 Scheduler.Instance.SendPendingCommands(pendingCommands, turn);
                 Insert(pendingCommands, turn, identity);
-                pendingCommands = new List<CommandBase>();
+                pendingCommands = new List<Command>();
             }
         }
 
@@ -130,13 +131,13 @@ namespace Game.Lockstep {
 
         #region Thread Communication
 
-        public void AddPendingCommand(CommandBase command) {
+        public void AddPendingCommand(Command command) {
             lock (lockPending) {
                 pendingCommands.Add(command);
             }
         }
 
-        public void Insert(List<CommandBase> commands, long scheduledTurn, int playerID) {
+        public void Insert(List<Command> commands, long scheduledTurn, int playerID) {
             buffer.Insert(commands, scheduledTurn, playerID);
         }
 

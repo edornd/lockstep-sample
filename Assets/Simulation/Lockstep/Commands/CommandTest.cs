@@ -2,18 +2,23 @@ using LiteNetLib.Utils;
 using System;
 
 namespace Game.Lockstep {
-    public class CommandTest : CommandBase {
+    public class CommandTest : Command {
+
+        public CommandTest() { }
+
+        public CommandTest(int playerID) : base(CommandType.Test, playerID) { }
 
         public override void Process() {
-            UnityEngine.Debug.Log("wowo sun el cumand! test al turn: " + Turn);
+            UnityEngine.Debug.Log("wowo son el cumand di Playah: " + Source);
         }
 
         public override void Serialize(NetDataWriter writer) {
             base.Serialize(writer);
         }
 
-        public override void Deserialize(NetDataReader writer) {
-            base.Deserialize(writer);
+        public override void Deserialize(NetDataReader reader) {
+            type = CommandType.Test;
+            base.Deserialize(reader);
         }
     }
 }

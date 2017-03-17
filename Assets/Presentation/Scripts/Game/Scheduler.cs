@@ -22,6 +22,12 @@ namespace Presentation {
             lockstep = LockstepLogic.Instance;
         }
 
+        void Update() {
+            if (Input.GetKeyDown(KeyCode.C)) {
+                InsertCommand(new CommandTest(identity));
+            }
+        }
+
         void OnGUI() {
             GUI.Label(new Rect(20, 20, 300, 20), "turn:" + turn);
         }
@@ -34,11 +40,11 @@ namespace Presentation {
             GameClient.Unregister(NetPacketType.TurnData, OnReceiveTurnData);
         }
 
-        public void InsertCommand(CommandBase command) {
+        public void InsertCommand(Command command) {
             lockstep.AddPendingCommand(command);
         }
 
-        public void SendPendingCommands(List<CommandBase> commands, long scheduledTurn) {
+        public void SendPendingCommands(List<Command> commands, long scheduledTurn) {
             turn = scheduledTurn;
             //Debug.Log("Sending commands...");
             PacketTurnData message = new PacketTurnData(identity, scheduledTurn, commands);

@@ -28,7 +28,7 @@ namespace Game.Lockstep {
         /// Inserts the given command in the correct list, checking the scheduled turn ID.
         /// </summary>
         /// <param name="command">command to schedule</param>
-        public void Insert(List<CommandBase> commands, long scheduledTurn, int source) {
+        public void Insert(List<Command> commands, long scheduledTurn, int source) {
             lock (bufferLock) {
                 int offset = (int)scheduledTurn % bufferSize;
                 if (turnCommands[offset].Count < numPlayers) {

@@ -6,12 +6,12 @@ namespace Game.Network {
     public class PacketTurnData : PacketBase {
 
         private long turn;
-        private List<CommandBase> commands;
+        private List<Command> commands;
         private int count;
 
         public PacketTurnData() { }
 
-        public PacketTurnData(int sender, long turn, List<CommandBase> commands) : base(NetPacketType.TurnData, sender) {
+        public PacketTurnData(int sender, long turn, List<Command> commands) : base(NetPacketType.TurnData, sender) {
             this.turn = turn;
             this.commands = commands;
             this.count = commands.Count;
@@ -19,13 +19,13 @@ namespace Game.Network {
 
         public long Turn { get { return turn; } }
 
-        public List<CommandBase> Commands { get { return commands; } }
+        public List<Command> Commands { get { return commands; } }
 
         public override void Serialize(NetDataWriter writer) {
             base.Serialize(writer);
             writer.Put(turn);
             writer.Put(count);
-            foreach(CommandBase cmd in commands) {
+            foreach(Command cmd in commands) {
                 cmd.Serialize(writer);
             }
         }
@@ -35,9 +35,10 @@ namespace Game.Network {
             base.Deserialize(reader);
             turn = reader.GetLong();
             count = reader.GetInt();
-            commands = new List<CommandBase>();
+            commands = new List<Command>();
             for (int i = 0; i < count; i++) {
-                CommandBase cmd = CommandBase.Read(reader);
+                Command cmd = CommandFactory.Create(reader);
+                cmd.Source = sender;
                 commands.Add(cmd);
             }
         }
