@@ -14,7 +14,7 @@ namespace Game.Lockstep {
         private object bufferLock;
 
         public CommandBuffer(int lookAhead, int numPlayers) {
-            this.bufferSize = lookAhead*2;
+            this.bufferSize = lookAhead;
             this.numPlayers = numPlayers;
             this.turnCommands = new TurnData[this.bufferSize];
             for (uint i = 0; i < bufferSize; i++) {

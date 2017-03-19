@@ -34,6 +34,7 @@ namespace Presentation.Network {
             if (baseClient != null) {
                 baseClient.Bind(NetPacketType.PeerDisconnect, OnDisconnect);
                 baseClient.Bind(NetPacketType.NetError, OnNetworkError);
+                baseClient.BindDefault(OnUnknownDataReceived);
             }
         }
 
@@ -41,6 +42,8 @@ namespace Presentation.Network {
             if (baseClient != null) {
                 baseClient.Unbind(NetPacketType.PeerDisconnect, OnDisconnect);
                 baseClient.Unbind(NetPacketType.NetError, OnNetworkError);
+                baseClient.UnbindDefault(OnUnknownDataReceived);
+
             }
         }
 
@@ -52,34 +55,6 @@ namespace Presentation.Network {
         void OnDestroy() {
             if (baseClient != null)
                 baseClient.Disconnect();
-        }
-
-        #endregion
-
-        #region Instance Methods
-
-        /// <summary>
-        /// Resets the game client instance, destroying any server object.
-        /// </summary>
-        public void Reset() {
-            baseClient.Disconnect();
-            if (isHost) {
-                Destroy(serverObject);
-                isHost = false;
-            }
-        }
-
-        /// <summary>
-        /// Instantiates a new server prefab and connects to the newly created server.
-        /// </summary>
-        public void Host() {
-            if (serverObject != null) {
-                Debug.LogWarning("Server GameObject already instantiated!");
-                return;
-            }
-            serverObject = GameObject.Instantiate(serverPrefab, null, false) as GameObject;
-            baseClient.Connect("localhost", serverObject.GetComponent<GameServer>().port);
-            isHost = true;
         }
 
         #endregion
@@ -157,6 +132,34 @@ namespace Presentation.Network {
 
         #endregion
 
+        #region Instance Methods
+
+        /// <summary>
+        /// Resets the game client instance, destroying any server object.
+        /// </summary>
+        public void Reset() {
+            baseClient.Disconnect();
+            if (isHost) {
+                Destroy(serverObject);
+                isHost = false;
+            }
+        }
+
+        /// <summary>
+        /// Instantiates a new server prefab and connects to the newly created server.
+        /// </summary>
+        public void Host() {
+            if (serverObject != null) {
+                Debug.LogWarning("Server GameObject already instantiated!");
+                return;
+            }
+            serverObject = GameObject.Instantiate(serverPrefab, null, false) as GameObject;
+            baseClient.Connect("localhost", serverObject.GetComponent<GameServer>().port);
+            isHost = true;
+        }
+
+        #endregion
+
         #region Handlers
 
         /// <summary>
@@ -174,6 +177,16 @@ namespace Presentation.Network {
         /// <param name="args">object containing the error code</param>
         private void OnNetworkError(NetPeer peer, NetEventArgs args) {
             NetEventManager.Trigger(NetEventType.NetworkError, args);
+        }
+
+        /// <summary>
+        /// Handler for unhandled packet types.
+        /// </summary>
+        /// <param name="client">client who sent the packet</param>
+        /// <param name="args">unknown packet</param>
+        private void OnUnknownDataReceived(NetPeer client, NetEventArgs args) {
+            UnityEngine.Debug.LogWarning("Received unhandled data from the server");
+            UnityEngine.Debug.LogWarning("Data: " + args.Data);
         }
 
         #endregion

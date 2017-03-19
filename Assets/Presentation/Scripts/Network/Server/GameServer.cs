@@ -17,6 +17,15 @@ namespace Presentation.Network {
         private int serverID;
         private PlayerBuffer players;
         private Dictionary<NetPeer, int> clients;
+        private ServerState currentState;
+
+        #region Properties
+
+        public int ID { get { return serverID; } }
+
+        public PlayerBuffer Players {  get { return players; } }
+
+        #endregion
 
         #region MonoBehaviour
 
@@ -29,26 +38,22 @@ namespace Presentation.Network {
             players = new PlayerBuffer(maxConnections);
             clients = new Dictionary<NetPeer, int>();
             StartServer();
+            currentState = new LobbyState(this);
         }
 
         void OnEnable() {
             baseServer.Bind(NetPacketType.PeerConnect, OnClientConnected);
             baseServer.Bind(NetPacketType.PeerDisconnect, OnClientDisconnected);
             baseServer.Bind(NetPacketType.NetError, OnNetworkError);
-
-            baseServer.Bind(NetPacketType.PeerAuth, OnClientAuthRequest);
-            baseServer.Bind(NetPacketType.PlayerReady, OnClientReady);
-            baseServer.Bind(NetPacketType.TurnData, OnClientTurnData);
+            baseServer.BindDefault(OnUnknownDataReceived);
         }
 
         void OnDisable() {
             baseServer.Unbind(NetPacketType.PeerConnect, OnClientConnected);
             baseServer.Unbind(NetPacketType.PeerDisconnect, OnClientDisconnected);
             baseServer.Unbind(NetPacketType.NetError, OnNetworkError);
+            baseServer.UnbindDefault(OnUnknownDataReceived);
 
-            baseServer.Unbind(NetPacketType.PeerAuth, OnClientAuthRequest);
-            baseServer.Unbind(NetPacketType.PlayerReady, OnClientReady);
-            baseServer.Unbind(NetPacketType.TurnData, OnClientTurnData);
         }
 
         void Update() {
@@ -68,21 +73,69 @@ namespace Presentation.Network {
 
         #region Singleton
 
+        /// <summary>
+        /// Gets the netServer instance.
+        /// </summary>
         public static NetServer NetworkServer {
             get { return Instance.baseServer; }
         }
 
+        /// <summary>
+        /// Starts the network server.
+        /// </summary>
         public static void StartServer() {
             Init();
             instance.baseServer.Start();
         }
 
+        /// <summary>
+        /// Stops the network server.
+        /// </summary>
         public static void Stop() {
             instance.baseServer.Stop();
         }
 
+        /// <summary>
+        /// Starts the game, if the players are ready (host only)
+        /// </summary>
         public static void StartGame() {
             instance.StartGameInternal();
+        }
+
+        /// <summary>
+        /// Adds the packet to the output queue.
+        /// </summary>
+        /// <param name="packet">message to be sent</param>
+        /// <param name="client">client receiver</param>
+        public static void Send(PacketBase packet, NetPeer client) {
+            instance.baseServer.AddOutputMessage(new NetMessage(packet, client));
+        }
+
+        /// <summary>
+        /// Adds the packet to the output queue, for every client except the given one.
+        /// </summary>
+        /// <param name="packet">data to be sent</param>
+        /// <param name="client">client excluded (usually the original sender)</param>
+        public static void SendExcluding(PacketBase packet, NetPeer client) {
+            instance.baseServer.AddMessageExcluding(packet, client);
+        }
+
+        /// <summary>
+        /// Register an external handler for the given packet type.
+        /// </summary>
+        /// <param name="type">packet type</param>
+        /// <param name="handler">function to add</param>
+        public static void Register(NetPacketType type, MessageDelegate handler) {
+            instance.baseServer.Bind(type, handler);
+        }
+
+        /// <summary>
+        /// Unregister an external handler for the given packet type.
+        /// </summary>
+        /// <param name="type">packet type</param>
+        /// <param name="handler">function to remove</param>
+        public static void Unregister(NetPacketType type, MessageDelegate handler) {
+            instance.baseServer.Unbind(type, handler);
         }
 
         #endregion
@@ -111,7 +164,7 @@ namespace Presentation.Network {
                 players.Remove(p);
                 clients.Remove(client);
                 PacketBase message = new PacketPlayerLeave(serverID, p);
-                baseServer.Send(new NetMessage(message));
+                baseServer.AddOutputMessage(new NetMessage(message));
             }
         }
 
@@ -125,103 +178,50 @@ namespace Presentation.Network {
         }
 
         /// <summary>
-        /// Handler for authentication requests
+        /// Handler for unhandled packet types.
         /// </summary>
-        /// <param name="client">client the requested to be authenticated</param>
-        /// <param name="args">arguments containing raw data</param>
-        private void OnClientAuthRequest(NetPeer client, NetEventArgs args) {
-            PacketAuth packet = PacketBase.Read<PacketAuth>((NetDataReader)(args.Data));
-            //refuse if ID not 0
-            if (packet.Sender != 0) {
-                UnityEngine.Debug.Log("[SERVER] Client already has an ID");
-                Disconnect(client, "Authentication failed.");
-                return;
-            }
-            //refuse if there's no available slot
-            if (players.IsFull()) {
-                UnityEngine.Debug.Log("[SERVER] players list full");
-                Disconnect(client, "Server full.");
-                return;
-            }
-
-            //refuse if the ID getter fails (it shouldn't though)
-            int id;
-            if (!players.FirstEmptyID(out id)) {
-                UnityEngine.Debug.Log("[SERVER] no available id");
-                Disconnect(client, "Authentication failed.");
-                return;
-            }
-            //otherwise welcome new player
-            Player newPlayer = new Player(id, packet.Message);
-            PacketAuth response = new PacketAuth(serverID, "WLCM", newPlayer.ID);
-            baseServer.Send(new NetMessage(response, client));
-
-            //send already connected players to the new client
-            foreach(Player p in players) {
-                PacketBase playerPacket = new PacketPlayerEnter(serverID, p);
-                baseServer.Send(new NetMessage(playerPacket, client));
-            }
-
-            //send game info
-            PacketGameInfo gameInfo = new PacketGameInfo(serverID, 0);
-            baseServer.Send(new NetMessage(gameInfo, client));
-
-            //send new player to everybody, add him to the buffer
-            baseServer.Send(new NetMessage(new PacketPlayerEnter(serverID, newPlayer)));
-            clients.Add(client, newPlayer.ID);
-            players.Add(newPlayer);
-        }
-
-        /// <summary>
-        /// Handler for ready messages
-        /// </summary>
-        /// <param name="client">the sender</param>
-        /// <param name="args">the </param>
-        private void OnClientReady(NetPeer client, NetEventArgs args) {
-            PacketPlayerReady message = PacketBase.Read<PacketPlayerReady>((NetDataReader)(args.Data));
-            Player p = null;
-            if (players.TryGetValue(message.Sender, out p)) {
-                p.SetReady(message.Value);
-                baseServer.SendExcluding(new NetMessage(message, client));
-            }
-            else {
-                Disconnect(client, "Client not authenticated.");
-            }
-        }
-
-        /// <summary>
-        /// Received turn information, simply forwards it to every other client.
-        /// </summary>
-        /// <param name="client">sender</param>
-        /// <param name="args">wrapper containing a data reader</param>
-        private void OnClientTurnData(NetPeer client, NetEventArgs args) {
-            baseServer.ForwardRawData((NetDataReader)(args.Data), client);
+        /// <param name="client">client who sent the packet</param>
+        /// <param name="args">unknown packet</param>
+        private void OnUnknownDataReceived(NetPeer client, NetEventArgs args) {
+            UnityEngine.Debug.LogWarning("[SERVER] Received unhandled data from " + client.EndPoint);
+            UnityEngine.Debug.LogWarning("[SERVER] Data: " + args.Data);
         }
 
         #endregion
 
-        #region Private Helper Functions
+        #region Helper Functions
 
         /// <summary>
         /// Disconnects the given client, sending the extra message as additional info.
         /// </summary>
         /// <param name="client">the client to refuse</param>
         /// <param name="additionalInfo">text describing the reason</param>
-        private void Disconnect(NetPeer client, string additionalInfo) {
+        public void Disconnect(NetPeer client, string additionalInfo) {
             clients.Remove(client);
             byte[] data = System.Text.Encoding.ASCII.GetBytes(additionalInfo);
             baseServer.Disconnect(client, data);
         }
 
         /// <summary>
+        /// Registers the current player to the players buffer and assigns the relative client instance to the dictionary.
+        /// </summary>
+        /// <param name="client">peer instance belonging to the player</param>
+        /// <param name="player">player instance containing every info</param>
+        public void AddPlayer(NetPeer client, Player player) {
+            clients.Add(client, player.ID);
+            players.Add(player);
+        }
+
+        /// <summary>
         /// Instance function to start the game if all players are ready.
         /// </summary>
         private void StartGameInternal() {
-            if (!instance.players.ReadyToStart()) {
+            if (!players.ReadyToStart()) {
                 UnityEngine.Debug.Log("[SERVER] All clients must be ready in order to start!");
                 return;
             }
-            instance.baseServer.Send(new NetMessage(new PacketGameStart(instance.serverID)));
+            instance.baseServer.AddOutputMessage(new NetMessage(new PacketGameStart(instance.serverID)));
+            currentState = currentState.Next();
         }
 
         #endregion

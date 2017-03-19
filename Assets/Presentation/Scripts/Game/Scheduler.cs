@@ -12,9 +12,12 @@ namespace Presentation {
         private int identity;
         private LockstepLogic lockstep;
         private long turn;
+        //temp
+        private object turnLock;
 
         void Awake() {
-            Init(); 
+            Init();
+            turnLock = new object();
         }
 
         void Start() {
@@ -29,7 +32,7 @@ namespace Presentation {
         }
 
         void OnGUI() {
-            GUI.Label(new Rect(20, 20, 300, 20), "turn:" + turn);
+            GUI.Label(new Rect(20, 20, 300, 20), "turn:" + Turn);
         }
 
         void OnEnable() {
@@ -45,7 +48,7 @@ namespace Presentation {
         }
 
         public void SendPendingCommands(List<Command> commands, long scheduledTurn) {
-            turn = scheduledTurn;
+            UpdateTurn(scheduledTurn);
             //Debug.Log("Sending commands...");
             PacketTurnData message = new PacketTurnData(identity, scheduledTurn, commands);
             GameClient.Send(message);
@@ -56,5 +59,21 @@ namespace Presentation {
             //UnityEngine.Debug.Log("Received data from player " + message.Sender);
             lockstep.Insert(message.Commands, message.Turn, message.Sender);
         }
+
+        #region temporary
+
+        private void UpdateTurn(long turn) {
+            lock (turnLock) {
+                this.turn = turn;
+            }
+        }
+
+        private long Turn {
+            get {
+                lock(turnLock) { return turn; }
+            }
+        }
+
+        #endregion
     }
 }

@@ -118,7 +118,7 @@ namespace Game.Network {
         }
 
         public override void OnNetworkLatencyUpdate(NetPeer peer, int latency) {
-            HandleEvent(NetPacketType.PeerLatency, peer, new NetEventArgs(latency));
+            //HandleEvent(NetPacketType.PeerLatency, peer, new NetEventArgs(latency));
         }
 
         public override void OnNetworkReceive(NetPeer peer, NetDataReader reader) {

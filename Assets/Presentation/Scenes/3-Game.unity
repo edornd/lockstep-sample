@@ -119,7 +119,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b2a519601687d34e87faed4941f6321, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  frameLength: 200
+  frameLength: 50
   maxFrames: 4
 --- !u!4 &1242904951
 Transform:

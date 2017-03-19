@@ -19,6 +19,7 @@ namespace Game.Network {
 
         protected NetManager network;
         protected Dictionary<NetPacketType, MessageDelegate> handlers;
+        protected MessageDelegate defaultHandler;
         protected NetDataWriter writer;
 
         #region Constructors 
@@ -51,6 +52,14 @@ namespace Game.Network {
         }
 
         /// <summary>
+        /// Registers the given function delegate to the default handler.
+        /// </summary>
+        /// <param name="handler">function delegate designed to handle unknown packets</param>
+        public void BindDefault(MessageDelegate handler) {
+            defaultHandler += handler;
+        }
+
+        /// <summary>
         /// Registers the given function delegate to the given packet type.
         /// </summary>
         /// <param name="type">packet type to handle</param>
@@ -59,6 +68,14 @@ namespace Game.Network {
             if (handlers.ContainsKey(type)) {
                 handlers[type] -= handler;
             }
+        }
+
+        /// <summary>
+        /// Registers the given function delegate as default handler.
+        /// </summary>
+        /// <param name="handler">function delegate designed to handle unknown cases</param>
+        public void UnbindDefault(MessageDelegate handler) {
+            defaultHandler -= handler;
         }
 
         /// <summary>
@@ -73,7 +90,8 @@ namespace Game.Network {
                 handler(source, args);
             }
             else {
-                NetUtils.DebugWriteError("No handler designed for the packet type: " + type);
+                if (defaultHandler != null)
+                    defaultHandler.Invoke(source, args);
             }
         }
 

@@ -9,7 +9,7 @@ namespace Game.Network {
     /// </summary>
     public class NetServer : NetBase {
 
-        #region Private ariables
+        #region Private variables
 
         private List<NetPeer> clients;
         private Queue<NetMessage> outputMessages;
@@ -68,6 +68,30 @@ namespace Game.Network {
         }
 
         /// <summary>
+        /// Adds a message to be sent during the next game server update.
+        /// </summary>
+        /// <param name="message">message to be sent</param>
+        public void AddOutputMessage(NetMessage message) {
+            outputMessages.Enqueue(message);
+        }
+
+        /// <summary>
+        /// Sends to everybody, except for the client specified into the message instance.
+        /// </summary>
+        /// <param name="message">message to be sent</param>
+        public void AddMessageExcluding(PacketBase packet, NetPeer excluded) {
+            if (excluded != null) {
+                foreach (NetPeer client in clients) {
+                    if (client != excluded)
+                        AddOutputMessage(new NetMessage(packet, client));
+                }
+            }
+            else {
+                AddOutputMessage(new NetMessage(packet, null));
+            }
+        }
+
+        /// <summary>
         /// Sends every message in the output queue.
         /// </summary>
         public void SendMessages() {
@@ -81,10 +105,23 @@ namespace Game.Network {
         }
 
         /// <summary>
+        /// Disconnect the given client fro mthe server, sending the extra info.
+        /// </summary>
+        /// <param name="peer">client to disconnect</param>
+        /// <param name="extra">serialized extra info</param>
+        public void Disconnect(NetPeer peer, byte[] extra) {
+            network.DisconnectPeer(peer, extra);
+        }
+
+        #endregion
+
+        #region Private methods
+
+        /// <summary>
         /// Sends the message to a single client, or to every client if it's not specified.
         /// </summary>
         /// <param name="message"></param>
-        public void Send(NetMessage message) {
+        private void Send(NetMessage message) {
             if (message.Client != null) {
                 Send(message.Client, message.Packet);
             }
@@ -96,37 +133,6 @@ namespace Game.Network {
         }
 
         /// <summary>
-        /// Sends to everybody, except for the client specified into the message instance.
-        /// </summary>
-        /// <param name="message">message to be sent</param>
-        public void SendExcluding(NetMessage message) {
-            if (message.Client != null) {
-                foreach (NetPeer client in clients) {
-                    if (client != message.Client)
-                        Send(client, message.Packet);
-                }
-            }
-            else {
-                Send(message);
-            }
-        }
-
-        public void ForwardRawData(NetDataReader reader, NetPeer sender) {
-            foreach (NetPeer client in clients) {
-                if (client != sender)
-                    SendRaw(client, reader);
-            }
-        }
-
-        public void Disconnect(NetPeer peer, byte[] extra) {
-            network.DisconnectPeer(peer, extra);
-        }
-
-        #endregion
-
-        #region Private methods
-
-        /// <summary>
         /// Sends raw data to the given client by serializing the packet.
         /// This function uses the reliable channel.
         /// </summary>
@@ -135,17 +141,6 @@ namespace Game.Network {
         private void Send(NetPeer client, PacketBase packet) {
             writer.Reset();
             packet.Serialize(writer);
-            client.Send(writer, SendOptions.ReliableOrdered);
-        }
-
-        /// <summary>
-        /// Sends raw data to the given client by simply copying the bytes to the writer.
-        /// </summary>
-        /// <param name="client">receiver</param>
-        /// <param name="reader">serialized data to be sent</param>
-        private void SendRaw(NetPeer client, NetDataReader reader) {
-            writer.Reset();
-            writer.Put(reader.Data);
             client.Send(writer, SendOptions.ReliableOrdered);
         }
 
@@ -177,7 +172,7 @@ namespace Game.Network {
         }
 
         public override void OnNetworkLatencyUpdate(NetPeer peer, int latency) {
-
+            //HandleEvent(NetPacketType.PeerLatency, peer, new NetEventArgs(latency));
         }
 
         #endregion

@@ -2,6 +2,9 @@ using Game.Players;
 using LiteNetLib.Utils;
 
 namespace Game.Network {
+    /// <summary>
+    /// Abstract class for packets sending a player. See more specific packets.
+    /// </summary>
     public abstract class PacketPlayer : PacketBase {
 
         protected Player player;

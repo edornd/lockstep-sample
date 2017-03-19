@@ -7,7 +7,7 @@ namespace Game.Utils {
                 if (instance == null) {
                     instance = (T)Simulation.GetObjectOfType(typeof(T));
                     if (instance == null) {
-                        UnityEngine.Debug.Log("No instance of " + typeof(T) + " running in the simulation");
+                        UnityEngine.Debug.Log("No instance of " + typeof(T) + " running in the simulation.");
                     }
                 }
                 return instance;

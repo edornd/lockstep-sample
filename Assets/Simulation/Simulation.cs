@@ -55,6 +55,10 @@ namespace Game {
             instance.entities.Remove(entity);
         }
 
+        public static void Delay(int millisecs) {
+            instance.Sleep(millisecs);
+        }
+
         public static IGameBehaviour GetObjectOfType(Type type) {
             foreach(IGameBehaviour entity in instance.entities) {
                 if (entity.GetType().Equals(type)) {
@@ -103,7 +107,7 @@ namespace Game {
                     totalTime += targetTime;
                     accumulator -= targetTime;
                 }
-                Thread.Sleep(1);
+                Sleep(1);
             }
             Quit();
         }
@@ -163,6 +167,13 @@ namespace Game {
             return time;
         }
 
+        /// <summary>
+        /// Wrapper around the thread sleep function.
+        /// </summary>
+        /// <param name="millisecs">amount of milliseconds to sleep</param>
+        private void Sleep(int millisecs) {
+            Thread.Sleep(millisecs);
+        }
         #endregion
     }
 }
