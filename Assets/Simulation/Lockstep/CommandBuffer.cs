@@ -12,6 +12,7 @@ namespace Game.Lockstep {
         private int position;
 
         private object bufferLock;
+        private object countLock;
 
         public CommandBuffer(int lookAhead, int numPlayers) {
             this.bufferSize = lookAhead;
@@ -22,6 +23,39 @@ namespace Game.Lockstep {
             }
             position = 0;
             bufferLock = new object();
+            countLock = new object();
+        }
+
+        /// <summary>
+        /// Safely access to the current number of players.
+        /// </summary>
+        public int NumPlayers {
+            get {
+                lock(countLock) {
+                    return numPlayers;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates numPlayers to the new value, and inserts empty dummy data for the disconnected
+        /// player, in order to keep the turns going.
+        /// </summary>
+        /// <param name="activePlayers">new player count</param>
+        /// <param name="player">id of the disconnected user</param>
+        public void SetPlayersCount(int activePlayers, int player) {
+            lock (countLock) {
+                int oldCount = numPlayers;
+                numPlayers = activePlayers;
+
+                lock (bufferLock) {
+                    for (int i = 0; i < bufferSize ; i++) {
+                        if (!turnCommands[i].IsCompleted() && turnCommands[i].Size == oldCount) {
+                            turnCommands[i].Insert(new List<Command>(), player);
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -31,7 +65,7 @@ namespace Game.Lockstep {
         public void Insert(List<Command> commands, long scheduledTurn, int source) {
             lock (bufferLock) {
                 int offset = (int)scheduledTurn % bufferSize;
-                if (turnCommands[offset].Count < numPlayers) {
+                if (!turnCommands[offset].IsCompleted()) {
                     turnCommands[offset].Insert(commands, source);
                 }
             }
@@ -44,7 +78,7 @@ namespace Game.Lockstep {
         public TurnData Advance() {
             lock (bufferLock) {
                 TurnData current = turnCommands[position];
-                turnCommands[position] = new TurnData(numPlayers);
+                turnCommands[position] = new TurnData(NumPlayers);
                 position = (position + 1) % bufferSize;
                 return current;
             }
@@ -56,7 +90,8 @@ namespace Game.Lockstep {
         /// <returns></returns>
         public bool IsReadyToAdvance() {
             lock (bufferLock) {
-                return turnCommands[position].Count == numPlayers;
+                UnityEngine.Debug.Log(turnCommands[position]);
+                return turnCommands[position].IsCompleted();
             }
         }
     }

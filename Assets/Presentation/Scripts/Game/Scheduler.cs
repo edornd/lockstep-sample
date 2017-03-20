@@ -49,7 +49,6 @@ namespace Presentation {
 
         public void SendPendingCommands(List<Command> commands, long scheduledTurn) {
             UpdateTurn(scheduledTurn);
-            //Debug.Log("Sending commands...");
             PacketTurnData message = new PacketTurnData(identity, scheduledTurn, commands);
             GameClient.Send(message);
         }

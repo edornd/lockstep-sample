@@ -4,6 +4,14 @@ using LiteNetLib;
 using UnityEngine;
 
 namespace Presentation.Network {
+
+    public enum ClientState {
+        Disconnected,
+        Connected,
+        Lobby,
+        Game
+    }
+
     /// <summary>
     /// Higher level client class, using a NetClient for communication.
     /// </summary>
@@ -11,9 +19,11 @@ namespace Presentation.Network {
 
         public GameObject serverPrefab;
         private NetClient baseClient;
+        private ClientState currentState;
 
         private GameObject serverObject;
         private bool isHost;
+
 
         #region MonoBehaviour
 
@@ -27,6 +37,7 @@ namespace Presentation.Network {
             Init();
             PlayerManager.Init();
             baseClient = new NetClient(NetConfig.ClientDefault);
+            currentState = ClientState.Disconnected;
             isHost = false;
         }
 
@@ -71,6 +82,11 @@ namespace Presentation.Network {
         /// Returns true whether the current game is hosting the match.
         /// </summary>
         public static bool IsHost { get { return instance.isHost; } }
+
+        public static ClientState CurrentState {
+            get { return instance.currentState; }
+            set { instance.currentState = value; }
+        }
 
         /// <summary>
         /// Tries to connect to the given address and port.

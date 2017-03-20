@@ -30,6 +30,7 @@ public class LobbyManagerClient : MonoBehaviour {
 
     private void OnGameStart(NetPeer peer, NetEventArgs args) {
         Debug.Log("[CLIENT] Game start received!");
+        GameClient.CurrentState = ClientState.Game;
         SceneManager.LoadSceneAsync(3);
     }
 }

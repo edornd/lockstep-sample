@@ -7,6 +7,7 @@ namespace Game.Players {
         private int id;
         private string name;
         private bool ready;
+        private bool active;
 
         #region Constructors
 
@@ -20,6 +21,7 @@ namespace Game.Players {
             this.id = playerID;
             this.name = playerName;
             this.ready = false;
+            this.active = true;
         }
 
         #endregion
@@ -50,18 +52,24 @@ namespace Game.Players {
             this.ready = value;
         }
 
+        public void SetActive(bool value) {
+            this.active = value;
+        }
+
         #endregion
 
         public void Serialize(NetDataWriter writer) {
             writer.Put(id);
             writer.Put(name);
             writer.Put(ready);
+            writer.Put(active);
         }
 
         public void Deserialize(NetDataReader reader) {
             id = reader.GetInt();
             name = reader.GetString(50);
             ready = reader.GetBool();
+            active = reader.GetBool();
         }
 
         public override bool Equals(object obj) {

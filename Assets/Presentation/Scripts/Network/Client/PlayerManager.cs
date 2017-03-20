@@ -1,3 +1,4 @@
+using Game.Lockstep;
 using Game.Network;
 using Game.Players;
 using Game.Utils;
@@ -15,7 +16,8 @@ namespace Presentation.Network {
 
         private Dictionary<int, Player> players;
         private Player identity;
-        private int numPlayers;
+        private int totalPlayers;
+        private int activePlayers;
 
         //lock for each field
         private object playersLock;
@@ -26,7 +28,8 @@ namespace Presentation.Network {
 
         void Awake() {
             players = new Dictionary<int, Player>();
-            numPlayers = 0;
+            totalPlayers = 0;
+            activePlayers = 0;
             playersLock = new object();
             countLock = new object();
             idLock = new object();
@@ -56,6 +59,8 @@ namespace Presentation.Network {
         public void Reset() {
             players.Clear();
             identity = null;
+            totalPlayers = 0;
+            activePlayers = 0;
         }
 
         #endregion
@@ -80,9 +85,13 @@ namespace Presentation.Network {
 
         public static int PlayerCount {
             get {
-                lock (instance.countLock) {
-                    return instance.numPlayers;
-                }
+                return instance.TotalPlayersInternal;
+            }
+        }
+
+        public static int ActivePlayerCount {
+            get {
+                return instance.ActivePlayersInternal;
             }
         }
 
@@ -95,18 +104,26 @@ namespace Presentation.Network {
         public static void Add(Player player) {
             lock (instance.playersLock) {
                 instance.players.Add(player.ID, player);
-                lock (instance.countLock) {
-                    instance.numPlayers++;
-                }
+                instance.TotalPlayersInternal++;
+                instance.ActivePlayersInternal++;
             }
         }
 
         public static void Remove(Player player) {
             lock (instance.playersLock) {
                 if (instance.players.Remove(player.ID)) {
-                    lock (instance.countLock) {
-                        instance.numPlayers++;
-                    }
+                    instance.TotalPlayersInternal--;
+                    instance.ActivePlayersInternal--;
+                }
+            }
+        }
+
+        public static void SetDisconnected(int playerID) {
+            lock (instance.playersLock) {
+                Player player = null;
+                if (instance.players.TryGetValue(playerID, out player)) {
+                    player.SetActive(false);
+                    instance.ActivePlayersInternal--;
                 }
             }
         }
@@ -115,7 +132,15 @@ namespace Presentation.Network {
 
         #region Event Handlers
 
+        /// <summary>
+        /// Handler for "player enter" packets.
+        /// </summary>
+        /// <param name="peer">server</param>
+        /// <param name="args">raw data containing the player packet</param>
         private void OnPlayerEnter(NetPeer peer, NetEventArgs args) {
+            if (GameClient.CurrentState == ClientState.Game)
+                return;
+
             PacketPlayerEnter message = PacketBase.Read<PacketPlayerEnter>((NetDataReader)(args.Data));
             if (message.Player.ID == identity.ID) {
                 SetIdentity(message.Player);
@@ -124,22 +149,62 @@ namespace Presentation.Network {
             NetEventManager.Trigger(NetEventType.PlayerEnter, args);
         }
 
+        /// <summary>
+        /// Handler for 'player leaving' packets.
+        /// Removes the player if the game is not started yet, otherwise mark him as 'disconnected'.
+        /// </summary>
+        /// <param name="peer">server</param>
+        /// <param name="args">wrapper around raw data containing the packet</param>
         private void OnPlayerLeave(NetPeer peer, NetEventArgs args) {
             PacketPlayerEnter message = PacketBase.Read<PacketPlayerEnter>((NetDataReader)(args.Data));
             if (message.Player.ID == Identity.ID) {
                 UnityEngine.Debug.LogWarning("Dafuq, I can't leave myself!");
                 return;
             }
-            Remove(message.Player);
+            if (GameClient.CurrentState != ClientState.Game) {
+                Remove(message.Player);
+            }
+            else {
+                SetDisconnected(message.Player.ID);
+                LockstepLogic.Instance.UpdatePlayersCount(activePlayers, message.Player.ID);
+            }
             NetEventManager.Trigger(NetEventType.PlayerLeave, args);
         }
 
         private void OnPlayerReady(NetPeer peer, NetEventArgs args) {
+            if (GameClient.CurrentState == ClientState.Game)
+                return;
             PacketPlayerReady message = PacketBase.Read<PacketPlayerReady>((NetDataReader)(args.Data));
             Player player = null;
             if (players.TryGetValue(message.Sender, out player)) {
                 player.SetReady(message.Value);
                 NetEventManager.Trigger(NetEventType.PlayerReady, args);
+            }
+        }
+
+        #endregion
+
+        #region Private Helper functions
+
+        private int TotalPlayersInternal {
+            get {
+                lock (countLock) {
+                    return totalPlayers;
+                }
+            }
+            set {
+                lock (countLock) {
+                    totalPlayers = value;
+                }
+            }
+        }
+
+        private int ActivePlayersInternal {
+            get {
+                return activePlayers;
+            }
+            set {
+                activePlayers = value;
             }
         }
 

@@ -55,11 +55,12 @@ namespace Presentation.UI {
             }
         }
 
+        //TODO reset localhost to address
         public void OnConnectButtonPressed() {
             OnUsernameChanged();
             OnAddressChanged();
             if (ValidateAddressIPv4() && ValidateUsername()) {
-                loginHandler.Login(username, address);
+                loginHandler.Login(username, "localhost");
             }
         }
 

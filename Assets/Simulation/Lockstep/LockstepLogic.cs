@@ -77,7 +77,7 @@ namespace Game.Lockstep {
                 if (currentTurn >= 0) { //Execute an actual turn only after the first two starting rounds
                     if (!IsLockstepReady()) { 
                         status = LockstepStatus.Delay;
-                        UnityEngine.Debug.LogWarning("Not ready for next turn!");
+                        UnityEngine.Debug.LogWarning("Not ready for next turn! Stuck at " + CurrentTurn);
                         return; // no need to go on, there's not enough data to proceed
                     }
                     ProcessTurn(); //finally ready to process stuff
@@ -212,6 +212,16 @@ namespace Game.Lockstep {
         /// <param name="playerID">player who issued the commands</param>
         public void Insert(List<Command> commands, long scheduledTurn, int playerID) {
             buffer.Insert(commands, scheduledTurn, playerID);
+        }
+
+        /// <summary>
+        /// Updates the players count inside the buffer, in order to set ready
+        /// even without the disconnected player.
+        /// </summary>
+        /// <param name="activePlayers">new count of the active players</param>
+        /// <param name="playerID">id of the player who left</param>
+        public void UpdatePlayersCount(int activePlayers, int playerID) {
+            buffer.SetPlayersCount(activePlayers, playerID);
         }
 
         #endregion
